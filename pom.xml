@@ -10,14 +10,12 @@
     <packaging>pom</packaging>
 
     <modules>
-
         <module>gateway</module>
         <module>user-service</module>
         <module>common</module>
         <module>note-service</module>
         <module>file-service</module>
         <module>chat-service</module>
-        <module>ai-service</module>
         <module>model</module>
         <module>groups-service</module>
     </modules>
