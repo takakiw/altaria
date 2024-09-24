@@ -1,0 +1,3 @@
+com.altaria.common.redis.RedisConfig
+com.altaria.common.config.WebMVCConfig
+com.altaria.common.exception.handle.GlobalException
