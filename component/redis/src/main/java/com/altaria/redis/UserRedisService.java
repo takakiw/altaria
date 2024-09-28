@@ -1,4 +1,4 @@
-package com.altaria.common.redis;
+package com.altaria.redis;
 
 import com.altaria.common.constants.UserConstants;
 import org.springframework.beans.factory.annotation.Autowired;

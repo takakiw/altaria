@@ -1,4 +1,4 @@
-package com.altaria.common.redis;
+package com.altaria.redis;
 
 import org.springframework.stereotype.Component;
 

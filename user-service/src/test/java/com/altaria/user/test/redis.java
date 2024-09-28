@@ -1,7 +1,10 @@
 package com.altaria.user.test;
 
 import com.altaria.common.constants.UserConstants;
+import com.altaria.common.pojos.user.entity.User;
 import com.altaria.common.redis.UserRedisService;
+import com.altaria.common.utils.JWTUtil;
+import com.altaria.user.mapper.UserMapper;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,9 @@ public class redis {
     @Autowired
     private UserRedisService userRedisService;
 
+    @Autowired
+    private UserMapper userMapper;
+
     @Test
     public void test() {
         redisTemplate.keys("*").forEach(System.out::println);
@@ -31,5 +37,15 @@ public class redis {
     public void test2() {
         System.out.println(DigestUtils.md5DigestAsHex("qq123321".getBytes()));
     }
+
+    @Test
+    public void test3() {
+        User user = userMapper.getUserById(1);
+        String jwt = JWTUtil.userToJWT(user);
+        System.out.println(jwt);
+        System.out.println(JWTUtil.parseJwt(jwt));
+    }
+
+
 
 }

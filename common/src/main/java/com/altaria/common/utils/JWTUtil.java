@@ -32,16 +32,18 @@ public class JWTUtil {
     }
 
     /**
-     *  解析jwt
+     * 解析jwt
      * @param jwt
      * @return
      */
-    public static Map<String, Object> parseJwt(String jwt){
-        Claims body = Jwts.parser().setSigningKey(signKey)
-                .parseClaimsJwt(jwt)
+    public static Map<String, Object> parseJwt(String jwt) {
+        Claims body = Jwts.parser()
+                .setSigningKey(signKey)
+                .parseClaimsJws(jwt)
                 .getBody();
         return body;
     }
+
 
     /**
      * user对象转jwt

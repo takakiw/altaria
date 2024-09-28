@@ -1,13 +1,12 @@
 package com.altaria.user.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.crypto.SignUtil;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.LoginUser;
+import com.altaria.redis.UserRedisService;
 import com.altaria.user.mapper.UserMapper;
-import com.altaria.common.redis.UserRedisService;
 import com.altaria.user.service.LoginService;
 import com.altaria.common.pojos.user.entity.User;
 import jakarta.mail.internet.InternetAddress;

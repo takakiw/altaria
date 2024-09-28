@@ -1,11 +1,9 @@
 package com.altaria.user.controller;
 
 import com.altaria.common.constants.UserConstants;
-import com.altaria.common.exception.BaseException;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.LoginUser;
 import com.altaria.user.service.LoginService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +26,7 @@ public class LoginController {
     }
 
     @PostMapping("/register")
-    public Result register(@RequestBody @Valid LoginUser loginUser) {
+    public Result register(@RequestBody LoginUser loginUser) {
         return loginService.register(loginUser);
     }
 }

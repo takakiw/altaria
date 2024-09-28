@@ -1,4 +1,4 @@
-package com.altaria.common.redis;
+package com.altaria.redis;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package com.altaria.common.exception.handle;
+package com.altaria.config.exception.handle;
 
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
@@ -13,6 +13,9 @@ public class GlobalException {
 
     @ExceptionHandler(Exception.class)
     public Result err(Exception e){
+        if (e.getMessage() == null){
+            return Result.error();
+        }
         return Result.error(e.getMessage());
     }
 }

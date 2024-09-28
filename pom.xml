@@ -17,6 +17,7 @@
         <module>file-service</module>
         <module>chat-service</module>
         <module>groups-service</module>
+        <module>component</module>
     </modules>
 
 

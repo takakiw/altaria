@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 
 @Setter
 @Getter
-@ToString
 public class User implements Serializable {
     private Integer id;
     private String userName;

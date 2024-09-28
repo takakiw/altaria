@@ -1,4 +1,4 @@
-package com.altaria.common.utils;
+package com.altaria.redis;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

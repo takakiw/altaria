@@ -1,4 +1,4 @@
-package com.altaria.common.exception;
+package com.altaria.config.exception;
 
 public class BaseException extends Exception {
 
