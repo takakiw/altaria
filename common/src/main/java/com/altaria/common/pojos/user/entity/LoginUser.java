@@ -1,24 +1,17 @@
 package com.altaria.common.pojos.user.entity;
 
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
+import org.hibernate.validator.constraints.Length;
 
 @Setter
 @Getter
 @ToString
-public class User implements Serializable {
-    private Integer id;
+public class LoginUser {
     private String userName;
     private String password;
     private String email;
     private String nickName;
-    private String avatar;
-    private int role;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
+    private String code;
 }

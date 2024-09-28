@@ -1,4 +1,4 @@
-package com.altaria.common.pojos.user.entity;
+package com.altaria.common.pojos.user.vo;
 
 
 import lombok.Getter;
@@ -11,14 +11,10 @@ import java.time.LocalDateTime;
 @Setter
 @Getter
 @ToString
-public class User implements Serializable {
+public class UserVO implements Serializable {
     private Integer id;
     private String userName;
-    private String password;
     private String email;
     private String nickName;
     private String avatar;
-    private int role;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
 }

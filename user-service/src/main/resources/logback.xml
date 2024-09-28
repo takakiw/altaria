@@ -2,7 +2,7 @@
 <configuration>
 
     <!-- 定义日志输出格式的模式 -->
-    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n" />
+    <property name="LOG_PATTERN" value="%date{MM-dd HH:mm:ss} %highlight(%-5level) [%thread] %logger{35} %msg%n" />
 
     <!-- 控制台日志输出配置 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -27,8 +27,17 @@
     </root>
 
     <!-- 为特定包或类定义自定义日志记录器 -->
-    <logger name="com.altaria.service" level="info"/> <!-- com.itheima.service 包的日志级别为 INFO -->
-    <logger name="com.altaria.mapper" level="debug"/> <!-- com.itheima.mapper 包的日志级别为 DEBUG -->
-    <logger name="com.altaria.controller" level="info"/>
+    <logger name="com.altaria.service" level="info">
+        <appender-ref ref="CONSOLE" /> <!-- 参考文件 appender -->
+        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    </logger> <!-- com.itheima.service 包的日志级别为 INFO -->
+    <logger name="com.altaria.mapper" level="debug">
+        <appender-ref ref="CONSOLE" /> <!-- 参考文件 appender -->
+        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    </logger> <!-- com.itheima.mapper 包的日志级别为 DEBUG -->
+    <logger name="com.altaria.controller" level="info">
+        <appender-ref ref="CONSOLE" /> <!-- 参考文件 appender -->
+        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    </logger>
 
 </configuration>
