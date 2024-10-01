@@ -15,7 +15,7 @@
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
         <file>.logs/user-service.log</file> <!-- 日志文件的位置 -->
         <encoder>
-            <pattern>${LOG_PATTERN}</pattern> <!-- 使用上面定义的日志格式 -->
+            <pattern>%date{MM-dd HH:mm:ss} %-5level [%thread] %logger{35} %msg%n</pattern> <!-- 使用上面定义的日志格式 -->
         </encoder>
     </appender>
 
@@ -27,17 +27,14 @@
     </root>
 
     <!-- 为特定包或类定义自定义日志记录器 -->
-    <logger name="com.altaria.service" level="info">
-        <appender-ref ref="CONSOLE" /> <!-- 参考文件 appender -->
-        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    <logger name="com.altaria.user.service" level="info">
+
     </logger> <!-- com.itheima.service 包的日志级别为 INFO -->
-    <logger name="com.altaria.mapper" level="debug">
-        <appender-ref ref="CONSOLE" /> <!-- 参考文件 appender -->
-        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    <logger name="com.altaria.user.mapper" level="debug">
+
     </logger> <!-- com.itheima.mapper 包的日志级别为 DEBUG -->
-    <logger name="com.altaria.controller" level="info">
-        <appender-ref ref="CONSOLE" /> <!-- 参考文件 appender -->
-        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    <logger name="com.altaria.user.controller" level="info">
+
     </logger>
 
 </configuration>

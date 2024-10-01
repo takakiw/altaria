@@ -17,6 +17,7 @@ public class WebMVCConfig extends WebMvcConfigurationSupport {
         registry.addResourceHandler("/**").addResourceLocations("classpath:/");
     }
 
+
     @Bean(name = "threadPoolTaskExecutor")
     public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

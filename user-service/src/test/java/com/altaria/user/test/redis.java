@@ -2,8 +2,8 @@ package com.altaria.user.test;
 
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.user.entity.User;
-import com.altaria.common.redis.UserRedisService;
 import com.altaria.common.utils.JWTUtil;
+import com.altaria.redis.UserRedisService;
 import com.altaria.user.mapper.UserMapper;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
@@ -40,12 +40,9 @@ public class redis {
 
     @Test
     public void test3() {
-        User user = userMapper.getUserById(1);
+        User user = userMapper.getUserById(1L);
         String jwt = JWTUtil.userToJWT(user);
         System.out.println(jwt);
         System.out.println(JWTUtil.parseJwt(jwt));
     }
-
-
-
 }

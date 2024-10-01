@@ -2,7 +2,10 @@ package com.altaria.common.enums;
 
 public enum StatusCodeEnum {
     SUCCESS(200,"操作成功"),
-    ERROR(500,"操作失败"),
+
+    ILLEGAL_REQUEST(400,"非法请求"),
+    UNAUTHORIZED(401,"未授权, 请登录"),
+    ERROR(500,"服务器内部错误"),
 
     // 参数错误
     PARAM_ERROR(1001,"参数错误"),
@@ -17,7 +20,8 @@ public enum StatusCodeEnum {
     USER_OR_PASSWORD_ERROR(2006,"用户名或密码错误"),
     VERIFY_CODE_ERROR(2007,"验证码错误或已失效"),
     VERIFY_CODE_EXPIRED(2008,"验证码已过期"),
-    VERIFY_CODE_SEND_FAILED(2009,"验证码发送失败");
+    VERIFY_CODE_SEND_FAILED(2009,"验证码发送失败"),
+    TOKEN_INVALID(2010, "token无效, 请重新登录");
 
 
     int code;

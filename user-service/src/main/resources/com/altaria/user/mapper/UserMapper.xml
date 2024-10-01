@@ -5,6 +5,30 @@
         insert into tb_user(id, user_name, password, email, nick_name, avatar, role, create_time, update_time)
         VALUES (#{id}, #{userName}, #{password}, #{email}, #{nickName}, #{avatar}, #{role}, #{createTime}, #{updateTime})
     </insert>
+    <update id="updateUser">
+        update tb_user
+        <set>
+            <if test="password != null and password != ''">
+                `password` = #{password},
+            </if>
+            <if test="email != null and email != ''">
+                email = #{email},
+            </if>
+            <if test="nickName != null and nickName != ''">
+                nick_name = #{nickName},
+            </if>
+            <if test="avatar != null and avatar != ''">
+                avatar = #{avatar},
+            </if>
+            <if test="role != null">
+                `role` = #{role},
+            </if>
+            update_time = #{updateTime}
+        </set>
+        where id = #{id}
+    </update>
+
+
     <select id="getUserById" resultType="com.altaria.common.pojos.user.entity.User">
         select * from tb_user
         where id = #{id}
@@ -18,8 +42,8 @@
             <if test="userName != null and userName != ''">
                 and user_name = #{userName}
             </if>
-            <if test="password != null and password != ''" >
-                and password = #{password}
+            <if test="password != null and password != ''">
+                and `password` = #{password}
             </if>
             <if test="email != null and email != ''">
                 and email = #{email}

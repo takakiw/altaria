@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
-@Component
-@Order(-1) // 保证在其他filter之前执行
+//@Component
+//@Order(-1) // 保证在其他filter之前执行
 public class AuthGlobalFilter implements GlobalFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {

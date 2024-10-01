@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface UserMapper {
 
-    User getUserById(Integer userId);
+    User getUserById(Long userId);
 
     User select(User user);
 
@@ -21,4 +21,7 @@ public interface UserMapper {
 
     @Select("SELECT * FROM tb_user WHERE user_name = #{userName}")
     User getUserByUserName(String userName);
+
+    @AutoFill(OperationType.UPDATE)
+    void updateUser(User user);
 }

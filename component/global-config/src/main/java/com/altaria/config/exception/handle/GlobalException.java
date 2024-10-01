@@ -1,6 +1,5 @@
 package com.altaria.config.exception.handle;
 
-import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.ExceptionHandler;

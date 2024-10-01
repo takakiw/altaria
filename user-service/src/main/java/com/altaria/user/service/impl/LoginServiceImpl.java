@@ -1,10 +1,12 @@
 package com.altaria.user.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.IdUtil;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.LoginUser;
+import com.altaria.common.pojos.user.vo.LoginUserVO;
 import com.altaria.redis.UserRedisService;
 import com.altaria.user.mapper.UserMapper;
 import com.altaria.user.service.LoginService;
@@ -86,6 +88,7 @@ public class LoginServiceImpl implements LoginService {
             log.info("用户名已经被使用");
             return Result.error(StatusCodeEnum.USER_ALREADY_EXIST);
         }
+        user.setId(IdUtil.getSnowflake(1, 1).nextId());
         user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
         user.setAvatar(UserConstants.DEFAULT_AVATAR);
         user.setRole(UserConstants.DEFAULT_ROLE);
@@ -114,7 +117,9 @@ public class LoginServiceImpl implements LoginService {
             User dbUser = userMapper.select(user);
             if (dbUser != null){
                 log.info("用户:{} 登录成功", dbUser.getId());
-                return Result.success(userToJWT(dbUser));
+                LoginUserVO userVO = new LoginUserVO(dbUser.getId(), userToJWT(dbUser));
+                System.out.println(userVO);
+                return Result.success(userVO);
             }
             log.info("用户名或密码错误");
             return Result.error(StatusCodeEnum.USER_OR_PASSWORD_ERROR);
@@ -128,7 +133,8 @@ public class LoginServiceImpl implements LoginService {
                 return Result.error(StatusCodeEnum.EMAIL_NOT_EXIST);
             }
             log.info("用户:{} 邮箱登录成功", dbUser.getId());
-            return Result.success(userToJWT(dbUser));
+            LoginUserVO userVO = new LoginUserVO(dbUser.getId(), userToJWT(dbUser));
+            return Result.success(userVO);
         }
     }
 
