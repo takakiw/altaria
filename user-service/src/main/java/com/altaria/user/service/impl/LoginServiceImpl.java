@@ -16,12 +16,17 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import java.util.concurrent.TimeUnit;
+
 
 import static com.altaria.common.utils.JWTUtil.userToJWT;
 
@@ -36,6 +41,9 @@ public class LoginServiceImpl implements LoginService {
     private UserRedisService userRedisService;
 
     @Autowired
+    private RedissonClient redissonClient;
+
+    @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -47,13 +55,17 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public Result sendCode(String email, String type) {
-        if (StringUtils.isEmpty(email) || !email.matches(UserConstants.EMAIL_REGEX)){
-            log.info("邮箱参数错误");
+        if (!email.matches(UserConstants.EMAIL_REGEX)){
+            log.info("邮箱格式错误");
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
         if (!type.equals(UserConstants.TYPE_LOGIN) && !type.equals(UserConstants.TYPE_REGISTER)){
             log.info("邮件类型错误");
             return Result.error(StatusCodeEnum.PARAM_ERROR);
+        }
+        if (userRedisService.getEmailCodeTTL(type, email) - 60 > 0){
+            log.info("验证码发送频繁");
+            return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
        threadPoolTaskExecutor.execute(() -> {
            String code = RandomStringUtils.random(6, true, true);
@@ -72,34 +84,52 @@ public class LoginServiceImpl implements LoginService {
             log.info("注册参数错误");
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
+        if (!loginUser.getEmail().matches(UserConstants.EMAIL_REGEX)){
+            log.info("邮箱格式错误");
+            return Result.error(StatusCodeEnum.PARAM_ERROR);
+        }
         String code = userRedisService.getEmailCode(UserConstants.TYPE_REGISTER, loginUser.getEmail());
-
         if (StringUtils.isEmpty(code) || !code.equals(loginUser.getCode())) {
             return Result.error(StatusCodeEnum.VERIFY_CODE_ERROR);
         }
-        User user = BeanUtil.copyProperties(loginUser, User.class);
-        User dbUser = userMapper.getUserByEmail(user.getEmail());
-        if (dbUser != null){
-            log.info("邮箱已经被使用");
-            return Result.error(StatusCodeEnum.EMAIL_ALREADY_EXIST);
+
+        RLock lock = redissonClient.getLock("registerLock:" + loginUser.getEmail());
+        try {
+            boolean locked = lock.tryLock(10, 30, TimeUnit.SECONDS);
+            if (locked) {
+                User user = BeanUtil.copyProperties(loginUser, User.class);
+                User dbUser = userMapper.getUserByEmail(user.getEmail());
+                if (dbUser != null) {
+                    log.info("邮箱已经被使用");
+                    return Result.error(StatusCodeEnum.EMAIL_ALREADY_EXIST);
+                }
+                dbUser = userMapper.getUserByUserName(user.getUserName());
+                if (dbUser != null) {
+                    log.info("用户名已经被使用");
+                    return Result.error(StatusCodeEnum.USER_ALREADY_EXIST);
+                }
+                user.setId(IdUtil.getSnowflake(1, 1).nextId());
+                user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
+                user.setAvatar(UserConstants.DEFAULT_AVATAR);
+                user.setRole(UserConstants.DEFAULT_ROLE);
+                user.setNickName(UserConstants.DEFAULT_NICKNAME + RandomStringUtils.random(5, true, true));
+                int flag = userMapper.insert(user);
+                if (flag > 0) {
+                    log.info("用户注册成功 {}", flag);
+                    return Result.success(new LoginUserVO(user.getId(), userToJWT(user)));
+                }
+                log.warn("用户注册失败");
+                return Result.error(StatusCodeEnum.ERROR);
+            } else {
+                log.info("获取锁失败");
+                return Result.error(StatusCodeEnum.ERROR);
+            }
+        } catch (Exception e) {
+            log.error("用户注册失败", e);
+            return Result.error(StatusCodeEnum.ERROR);
+        } finally {
+            lock.unlock();
         }
-        dbUser = userMapper.getUserByUserName(user.getUserName());
-        if (dbUser != null){
-            log.info("用户名已经被使用");
-            return Result.error(StatusCodeEnum.USER_ALREADY_EXIST);
-        }
-        user.setId(IdUtil.getSnowflake(1, 1).nextId());
-        user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
-        user.setAvatar(UserConstants.DEFAULT_AVATAR);
-        user.setRole(UserConstants.DEFAULT_ROLE);
-        user.setNickName(UserConstants.DEFAULT_NICKNAME+RandomStringUtils.random(5, true, true));
-        int flag = userMapper.insert(user);
-        if (flag > 0){
-            log.error("用户注册失败 {}", flag);
-            return Result.success();
-        }
-        log.info("用户注册成功 {}", flag);
-        return Result.error(StatusCodeEnum.ERROR);
     }
 
     @Override

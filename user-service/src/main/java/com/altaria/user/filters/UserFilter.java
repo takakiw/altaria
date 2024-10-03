@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
+import com.altaria.common.utils.BaseContext;
 import com.altaria.common.utils.JWTUtil;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
@@ -45,8 +46,7 @@ public class UserFilter implements Filter {
             // 解析token, 解析成功则没有过期
             Map<String, Object> map = JWTUtil.parseJwt(token);
             String uId = map.get(UserConstants.USER_ID).toString();
-            // 设置请求头
-            request.setAttribute(UserConstants.USER_ID, uId);
+            BaseContext.setCurrentId(Long.parseLong(uId));
             // 更新token
             String jwt = JWTUtil.generateJwt(map);
             response.setHeader("Authorization", "Bearer " + jwt);
@@ -55,6 +55,11 @@ public class UserFilter implements Filter {
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    public void destroy() {
+        BaseContext.removeCurrentId();
     }
 
     public void writerResponse(HttpServletResponse response, StatusCodeEnum statusCodeEnum) throws IOException {

@@ -21,7 +21,10 @@ public enum StatusCodeEnum {
     VERIFY_CODE_ERROR(2007,"验证码错误或已失效"),
     VERIFY_CODE_EXPIRED(2008,"验证码已过期"),
     VERIFY_CODE_SEND_FAILED(2009,"验证码发送失败"),
-    TOKEN_INVALID(2010, "token无效, 请重新登录");
+    TOKEN_INVALID(2010, "token无效, 请重新登录"),
+    USER_NAME_FORMAT_ERROR(2011, "用户名格式错误"),
+    EMAIL_CODE_EXPIRED(2012, "邮箱验证码已过期"),
+    SEND_FREQUENTLY(2013, "请勿频繁发送");
 
 
     int code;
