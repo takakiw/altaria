@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.altaria.file.mapper.FileInfoMapper">
+    <insert id="insert" parameterType="com.altaria.common.pojos.file.entity.FileInfo">
+        insert into file(id, uid, url, file_name, type, size, md5, pid, cover)
+        values (#{id}, #{uid}, #{url}, #{fileName}, #{type}, #{size}, #{md5}, #{pid}, #{cover})
+    </insert>
+    <update id="update">
+        update file
+        <set>
+            <if test="url != null">
+                url = #{url},
+            </if>
+            <if test="fileName != null">
+                file_name = #{fileName},
+            </if>
+            <if test="type != null">
+                type = #{type},
+            </if>
+            <if test="size != null">
+                size = #{size},
+            </if>
+            <if test="md5 != null and md5 != ''">
+                md5 = #{md5},
+            </if>
+            <if test="pid != null">
+                pid = #{pid},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="cover != null">
+                cover = #{cover},
+            </if>
+        </set>
+        <where>
+            id = #{id} and uid = #{uid}
+        </where>
+    </update>
+    <update id="updateStatusBatch">
+        update file set status = #{status}, update_time = #{updateTime} where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+    <delete id="deleteBatch">
+        delete from file where file.uid = #{uid} and file.id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <select id="select" resultType="com.altaria.common.pojos.file.entity.FileInfo">
+        select * from file
+        <where>
+            uid = #{uid}
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="url != null and url != ''">
+                and url = #{url}
+            </if>
+            <if test="fileName != null and fileName != ''">
+                and file_name like #{fileName}
+            </if>
+            <if test="type != null">
+                and type = #{type}
+            </if>
+            <if test="md5 != null and md5 != ''">
+                and md5 = #{md5}
+            </if>
+            <if test="pid != null">
+                and pid = #{pid}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+        </where>
+    </select>
+    <select id="getFileById" resultType="com.altaria.common.pojos.file.entity.FileInfo">
+        select * from file where id = #{id} and status = 0
+        <if test="uid != null">
+            and uid = #{uid}
+        </if>
+    </select>
+    <select id="getChildFiles" resultType="com.altaria.common.pojos.file.entity.FileInfo">
+        select * from file where pid = #{pid} and status = 0 and uid = #{uid}
+    </select>
+
+    <select id="getFileByIds" resultType="com.altaria.common.pojos.file.entity.FileInfo">
+        select * from file
+        <where>
+            id in
+            <foreach collection="ids" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            and uid = #{uid}
+        </where>
+    </select>
+</mapper>

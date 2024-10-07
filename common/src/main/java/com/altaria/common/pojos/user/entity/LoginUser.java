@@ -1,5 +1,6 @@
 package com.altaria.common.pojos.user.entity;
 
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

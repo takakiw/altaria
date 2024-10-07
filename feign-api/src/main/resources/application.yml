@@ -1,0 +1,7 @@
+spring:
+  cloud:
+    httpclient:
+        enabled: true
+    openfeign:
+      circuitbreaker:
+        enabled: true

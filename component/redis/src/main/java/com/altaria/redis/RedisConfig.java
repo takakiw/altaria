@@ -118,13 +118,9 @@ public class RedisConfig {
         return jackson2JsonRedisSerializer;
     }
 
-    @Bean
-    public RedisUtil redisUtil() {
-        return new RedisUtil();
-    }
 
     @Bean
-    public UserRedisService userRedisService() {
-        return new UserRedisService();
+    public RedisService RedisService() {
+        return new RedisService();
     }
 }

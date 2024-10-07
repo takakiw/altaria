@@ -1,0 +1,28 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: file-service
+  config:
+    import: nacos:file-service-space
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.96.132:8848
+        username: nacos
+        password: nacos
+      config:
+        server-addr: 192.168.96.132:8848
+        file-extension: yaml
+        username: nacos
+        password: nacos
+      server-addr: 192.168.96.132:8848
+    openfeign:
+      circuitbreaker: # 熔断器配置
+        enabled: true
+      httpclient:
+        enabled: true
+        max-connections: 1000 # 最大连接数
+        read-timeout: 1000 # 读取超时时间
+        connect-timeout: 1000 # 连接超时时间
+        time-to-live: 1000 # 存活时间

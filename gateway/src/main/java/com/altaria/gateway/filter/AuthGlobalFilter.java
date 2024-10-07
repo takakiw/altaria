@@ -18,29 +18,23 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
-//@Component
-//@Order(-1) // 保证在其他filter之前执行
+@Component
+@Order(-1) // 保证在其他filter之前执行
 public class AuthGlobalFilter implements GlobalFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpResponse response = exchange.getResponse();
 
-        String path = request.getURI().getPath();// 获取请求路径
-        if (path.contains("login") || path.contains("register")){
-            return chain.filter(exchange);
-        }
         // 验证token
         String token = request.getHeaders().getFirst("Authorization");
-        if (token == null || !token.startsWith("Bearer ")) {
-            response.setStatusCode(HttpStatusCode.valueOf(401));
-            return response.setComplete();
+        if (token != null && token.startsWith("Bearer ")){
+            token = token.substring(7);
+            Map<String, Object> map = JWTUtil.parseJwt(token);
+            String uId = map.get(UserConstants.USER_ID).toString();
+            ServerWebExchange webExchange = exchange.mutate().request(builder -> builder.header(UserConstants.USER_ID, uId).build()).build();
+            return chain.filter(webExchange);
         }
-        token = token.substring(7);
-        Map<String, Object> map = JWTUtil.parseJwt(token);
-        String uId = map.get(UserConstants.USER_ID).toString();
-        ServerWebExchange webExchange = exchange.mutate().request(builder -> builder.header(UserConstants.USER_ID, uId).build()).build();
-        return chain.filter(webExchange);
+        return chain.filter(exchange);
     }
 }

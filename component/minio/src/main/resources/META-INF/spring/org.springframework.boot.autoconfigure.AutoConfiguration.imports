@@ -1,1 +1,1 @@
-com.altaria.minio.config.MinioConfig
+com.altaria.minio.service.impl.MinioServiceImpl

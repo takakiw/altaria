@@ -7,7 +7,7 @@ import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.LoginUser;
 import com.altaria.common.pojos.user.vo.LoginUserVO;
-import com.altaria.redis.UserRedisService;
+import com.altaria.redis.RedisService;
 import com.altaria.user.mapper.UserMapper;
 import com.altaria.user.service.LoginService;
 import com.altaria.common.pojos.user.entity.User;
@@ -21,6 +21,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -38,7 +39,7 @@ public class LoginServiceImpl implements LoginService {
     private UserMapper userMapper;
 
     @Autowired
-    private UserRedisService userRedisService;
+    private RedisService redisService;
 
     @Autowired
     private RedissonClient redissonClient;
@@ -55,77 +56,60 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public Result sendCode(String email, String type) {
-        if (!email.matches(UserConstants.EMAIL_REGEX)){
-            log.info("邮箱格式错误");
+        if (!email.matches(UserConstants.EMAIL_REGEX)
+                || (!type.equals(UserConstants.TYPE_LOGIN) && !type.equals(UserConstants.TYPE_REGISTER))){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        if (!type.equals(UserConstants.TYPE_LOGIN) && !type.equals(UserConstants.TYPE_REGISTER)){
-            log.info("邮件类型错误");
-            return Result.error(StatusCodeEnum.PARAM_ERROR);
-        }
-        if (userRedisService.getEmailCodeTTL(type, email) - 60 > 0){
-            log.info("验证码发送频繁");
+        if (redisService.getEmailCodeTTL(type, email) - 60 > 0){
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
        threadPoolTaskExecutor.execute(() -> {
            String code = RandomStringUtils.random(6, true, true);
-           userRedisService.saveEmailCode(type,code, email);
+           redisService.saveEmailCode(type,code, email);
            String text = type.equals(UserConstants.TYPE_REGISTER)?UserConstants.EMAIL_REGISTER_TEXT:UserConstants.EMAIL_LOGIN_TEXT;
            String subject = type.equals(UserConstants.TYPE_REGISTER)?UserConstants.EMAIL_REGISTER_SUBJECT:UserConstants.EMAIL_LOGIN_SUBJECT;
            sendEmail(email,subject, String.format(text, code));
        });
-        log.info("验证码发送成功");
         return Result.success();
     }
 
     @Override
     public Result register(LoginUser loginUser) {
-        if (StringUtils.isAnyEmpty(loginUser.getUserName(),loginUser.getPassword(), loginUser.getEmail())){
-            log.info("注册参数错误");
+        if (StringUtils.isAnyBlank(loginUser.getUserName(),loginUser.getPassword(), loginUser.getEmail())){
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
-        if (!loginUser.getEmail().matches(UserConstants.EMAIL_REGEX)){
-            log.info("邮箱格式错误");
-            return Result.error(StatusCodeEnum.PARAM_ERROR);
-        }
-        String code = userRedisService.getEmailCode(UserConstants.TYPE_REGISTER, loginUser.getEmail());
+        String code = redisService.getEmailCode(UserConstants.TYPE_REGISTER, loginUser.getEmail());
         if (StringUtils.isEmpty(code) || !code.equals(loginUser.getCode())) {
             return Result.error(StatusCodeEnum.VERIFY_CODE_ERROR);
         }
-
         RLock lock = redissonClient.getLock("registerLock:" + loginUser.getEmail());
         try {
             boolean locked = lock.tryLock(10, 30, TimeUnit.SECONDS);
             if (locked) {
-                User user = BeanUtil.copyProperties(loginUser, User.class);
-                User dbUser = userMapper.getUserByEmail(user.getEmail());
+                User dbUser = userMapper.getUserByEmail(loginUser.getEmail());
                 if (dbUser != null) {
-                    log.info("邮箱已经被使用");
                     return Result.error(StatusCodeEnum.EMAIL_ALREADY_EXIST);
                 }
-                dbUser = userMapper.getUserByUserName(user.getUserName());
+                dbUser = userMapper.getUserByUserName(loginUser.getUserName());
                 if (dbUser != null) {
-                    log.info("用户名已经被使用");
                     return Result.error(StatusCodeEnum.USER_ALREADY_EXIST);
                 }
+                User user = new User();
                 user.setId(IdUtil.getSnowflake(1, 1).nextId());
+                user.setUserName(loginUser.getUserName());
+                user.setEmail(loginUser.getEmail());
                 user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
                 user.setAvatar(UserConstants.DEFAULT_AVATAR);
                 user.setRole(UserConstants.DEFAULT_ROLE);
-                user.setNickName(UserConstants.DEFAULT_NICKNAME + RandomStringUtils.random(5, true, true));
+                user.setNickName(UserConstants.DEFAULT_NICKNAME_PREFIX + RandomStringUtils.random(5, true, true));
                 int flag = userMapper.insert(user);
                 if (flag > 0) {
-                    log.info("用户注册成功 {}", flag);
                     return Result.success(new LoginUserVO(user.getId(), userToJWT(user)));
                 }
-                log.warn("用户注册失败");
-                return Result.error(StatusCodeEnum.ERROR);
-            } else {
-                log.info("获取锁失败");
-                return Result.error(StatusCodeEnum.ERROR);
             }
+            return Result.error(StatusCodeEnum.ERROR);
         } catch (Exception e) {
-            log.error("用户注册失败", e);
+            log.error("register error: {}", e);
             return Result.error(StatusCodeEnum.ERROR);
         } finally {
             lock.unlock();
@@ -133,36 +117,29 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
-    public Result login(LoginUser loginUser) {
+    public Result<LoginUserVO> login(LoginUser loginUser) {
         User user = BeanUtil.copyProperties(loginUser, User.class);
-        // 校验用户名或邮箱
         if (StringUtils.isAllBlank(user.getUserName(), user.getEmail())){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        // 使用用户名登录
         if (StringUtils.isNotEmpty(user.getUserName())){
-            // MD5加密密码
             String md5pwd = DigestUtils.md5DigestAsHex(user.getPassword().getBytes());
             user.setPassword(md5pwd);
             User dbUser = userMapper.select(user);
             if (dbUser != null){
-                log.info("用户:{} 登录成功", dbUser.getId());
                 LoginUserVO userVO = new LoginUserVO(dbUser.getId(), userToJWT(dbUser));
-                System.out.println(userVO);
                 return Result.success(userVO);
             }
-            log.info("用户名或密码错误");
             return Result.error(StatusCodeEnum.USER_OR_PASSWORD_ERROR);
-        }else { // 使用邮箱登录
-            String code = userRedisService.getEmailCode(UserConstants.TYPE_LOGIN, user.getEmail());
+        }else {
+            String code = redisService.getEmailCode(UserConstants.TYPE_LOGIN, user.getEmail());
             if (StringUtils.isEmpty(code) || !code.equals(loginUser.getCode())) {
                 return Result.error(StatusCodeEnum.VERIFY_CODE_ERROR);
             }
             User dbUser = userMapper.select(user);
             if (dbUser == null){
-                return Result.error(StatusCodeEnum.EMAIL_NOT_EXIST);
+                return Result.error(StatusCodeEnum.EMAIL_NOT_REGISTERED);
             }
-            log.info("用户:{} 邮箱登录成功", dbUser.getId());
             LoginUserVO userVO = new LoginUserVO(dbUser.getId(), userToJWT(dbUser));
             return Result.success(userVO);
         }
@@ -178,7 +155,7 @@ public class LoginServiceImpl implements LoginService {
             message.setContent(content, "text/html;charset=UTF-8");
             mailSender.send(message);
         } catch (Exception e) {
-            log.error("邮件发送失败", e);
+            log.error("send email error: {}", e);
         }
     }
 }

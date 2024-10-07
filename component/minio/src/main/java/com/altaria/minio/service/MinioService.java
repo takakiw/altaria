@@ -1,9 +1,12 @@
 package com.altaria.minio.service;
 
+
+
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.scheduling.annotation.Async;
 
 import java.io.InputStream;
+import java.util.List;
 
 public interface MinioService {
 
@@ -13,13 +16,15 @@ public interface MinioService {
     void upLoadFile(String fileName, InputStream inputStream, String contentType);
 
 
-    void deleteFile(String fileName);
+    @Async
+    boolean deleteFile(String fileName);
 
-    void deleteFile(String[] fileNames);
+    @Async
+    boolean deleteFile(List<String> fileNames);
 
     void downloadFile(String fileName, HttpServletResponse response);
 
-    public void previewVideo(String fileName, HttpServletResponse response, long start, long end);
+    void previewVideo(String fileName, HttpServletResponse response, long start, long end);
 
 
 }

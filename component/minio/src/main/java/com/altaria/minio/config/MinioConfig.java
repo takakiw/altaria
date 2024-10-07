@@ -4,34 +4,27 @@ import com.altaria.minio.service.MinioService;
 import com.altaria.minio.service.impl.MinioServiceImpl;
 import io.minio.MinioClient;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-@Configuration
-@ConfigurationProperties(prefix = "minio")
 @Data
+@EnableConfigurationProperties(MinioProperties.class)
+@Configuration
 public class MinioConfig {
 
-    private String endpoint;
+    @Autowired
+    private MinioProperties properties;
 
-    private String bucketName;
-
-    private String accessKey;
-
-    private String secretKey;
 
     @Bean
     public MinioClient minioClient() {
         return MinioClient.builder()
-                .endpoint(endpoint)
-                .credentials(accessKey, secretKey)
+                .endpoint(properties.getEndpoint())
+                .credentials(properties.getAccessKey(), properties.getSecretKey())
                 .build();
     }
-
-    @Bean
-    public MinioService minioService(MinioClient minioClient) {
-        return new MinioServiceImpl();
-    }
-
 }
