@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @SpringBootTest
@@ -31,20 +33,36 @@ public class Lang3Test {
     @Test
     public void test() throws IOException {
 
-        File file = new File("D:\\CodeStore\\GitTest\\easypan-main\\webser\\web_app\\easypan\\file\\202404\\3494146119kePANfVadk.mp4");
+        File file = new File("C:\\Users\\小文与\\Pictures\\20240713150547.jpg");
         FileInputStream inputStream = new FileInputStream(file);
-        String fileName = UUID.randomUUID().toString().replace("-", "") + ".mp4";
-        minioService.upLoadFile(fileName, inputStream, "video/mp4");
+        String fileName = UUID.randomUUID().toString().replace("-", "") + ".jpg";
+        minioService.upLoadFile(fileName, inputStream, "image/jpeg");
         FileInfo fileInfo = new FileInfo();
         fileInfo.setId(IdUtil.getSnowflake(1, 1).nextId());
         fileInfo.setUid(1L);
         fileInfo.setUrl(fileName);
-        fileInfo.setFileName("test.mp4");
-        fileInfo.setType(FileType.VIDEO.getType());
+        fileInfo.setFileName("20240713150547.jpg");
+        fileInfo.setType(FileType.getFileType("image/jpeg").getType());
         fileInfo.setSize(file.length());
         fileInfo.setMd5(DigestUtil.md5Hex(file));
         fileInfo.setPid(0L);
         int insert = fileInfoMapper.insert(fileInfo);
         System.out.println(insert);
+    }
+
+    @Test
+    public void test2() throws Exception {
+        List<String> urls = new ArrayList<>();
+        urls.add("20240713150547.jpg");
+        //urls.add("20240713150547.jpg");
+        urls.add("开发.png");
+        minioService.deleteFile(urls);
+        minioService.deleteFile("20240713150547.jpg");
+        Thread.sleep(10000);
+    }
+
+    @Test
+    public void test3() throws Exception {
+        System.out.println(FileType.getFileType("text/plain").getType());
     }
 }

@@ -118,9 +118,4 @@ public class RedisConfig {
         return jackson2JsonRedisSerializer;
     }
 
-
-    @Bean
-    public RedisService RedisService() {
-        return new RedisService();
-    }
 }

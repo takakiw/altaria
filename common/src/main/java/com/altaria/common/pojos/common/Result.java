@@ -28,6 +28,11 @@ public class Result<T> implements Serializable {
         result.code = StatusCodeEnum.SUCCESS.getCode();
         return result;
     }
+    public static <T> Result<T> success(Integer code) {
+        Result<T> result = new Result<T>();
+        result.code = code;
+        return result;
+    }
 
     public static <T> Result<T> error(StatusCodeEnum statusCodeEnum) {
         Result result = new Result();

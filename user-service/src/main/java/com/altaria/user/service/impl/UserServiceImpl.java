@@ -5,10 +5,9 @@ import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.User;
-import com.altaria.common.pojos.user.vo.UserSpaceVO;
 import com.altaria.common.pojos.user.vo.UserVO;
 import com.altaria.minio.service.MinioService;
-import com.altaria.redis.RedisService;
+import com.altaria.user.cache.UserCacheService;
 import com.altaria.user.mapper.UserMapper;
 import com.altaria.user.service.UserService;
 import jakarta.mail.internet.InternetAddress;
@@ -23,7 +22,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,7 +38,7 @@ public class UserServiceImpl implements UserService {
     private MinioService minioService;
 
     @Autowired
-    private RedisService redisService;
+    private UserCacheService cacheService;
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
@@ -62,13 +60,14 @@ public class UserServiceImpl implements UserService {
         }
         Long queryId = userId.compareTo(-1L) == 0? uId : userId;
         User user = null;
-        user = redisService.getUserById(queryId);
+        user = cacheService.getUserById(queryId);
         if (user == null) {
             user = userMapper.getUserById(queryId);
             if (user == null) {
+                cacheService.setUserNotExist(queryId);
                 return Result.error(StatusCodeEnum.USER_NOT_EXIST);
             }
-            redisService.saveUser(user);
+            cacheService.saveUser(user);
         }
         UserVO userVO = BeanUtil.copyProperties(user, UserVO.class);
         if (uId != null && uId.compareTo(queryId) == 0){
@@ -102,7 +101,7 @@ public class UserServiceImpl implements UserService {
             }
             user.setAvatar(newFileName);
             userMapper.updateUser(user);
-            redisService.deleteUser(uId);
+            cacheService.deleteUser(uId);
             return Result.success(newFileName);
         } catch (Exception e) {
             return  Result.error();
@@ -127,14 +126,14 @@ public class UserServiceImpl implements UserService {
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
         if (StringUtils.isNotEmpty(user.getPassword())){
-            String emailCode = redisService.getEmailCode(UserConstants.TYPE_UPDATE_PWD, user.getEmail());
+            String emailCode = cacheService.getEmailCode(UserConstants.TYPE_UPDATE_PWD, user.getEmail());
             if (StringUtils.isEmpty(emailCode) || !emailCode.equals(user.getCode())) {
                 return Result.error(StatusCodeEnum.VERIFY_CODE_ERROR);
             }
             user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
         }
         userMapper.updateUser(user);
-        redisService.deleteUser(uId);
+        cacheService.deleteUser(uId);
         return Result.success();
     }
 
@@ -143,34 +142,17 @@ public class UserServiceImpl implements UserService {
         if(!email.matches(UserConstants.EMAIL_REGEX)){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        if (redisService.getEmailCodeTTL(UserConstants.TYPE_UPDATE_PWD, email) - 60 > 0){
+        if (cacheService.getEmailCodeTTL(UserConstants.TYPE_UPDATE_PWD, email) - 60 > 0){
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
         threadPoolTaskExecutor.execute(() -> {
             String code = RandomStringUtils.random(6, true, true);
-            redisService.saveEmailCode(UserConstants.TYPE_UPDATE_PWD,code, email);
+            cacheService.saveEmailCode(UserConstants.TYPE_UPDATE_PWD,code, email);
             String text = UserConstants.EMAIL_UPDATE_PWD_TEXT;
             String subject = UserConstants.EMAIL_UPDATE_PWD_SUBJECT;
             sendEmail(email,subject, String.format(text, code));
         });
         return Result.success();
-    }
-
-    @Override
-    public Result getSpaceUserById(Long uId) {
-        if (uId == null){
-            return Result.error(StatusCodeEnum.UNAUTHORIZED);
-        }
-        User user = redisService.getUserById(uId);
-        if (user == null){
-            user = userMapper.getUserById(uId);
-            if (user == null){
-                return Result.error(StatusCodeEnum.USER_NOT_EXIST);
-            }
-            redisService.saveUser(user);
-        }
-        UserSpaceVO spaceVO = BeanUtil.copyProperties(user, UserSpaceVO.class);
-        return Result.success(spaceVO);
     }
 
     private void sendEmail(String to, String subject, String content) {

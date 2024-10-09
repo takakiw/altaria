@@ -7,7 +7,7 @@ import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.LoginUser;
 import com.altaria.common.pojos.user.vo.LoginUserVO;
-import com.altaria.redis.RedisService;
+import com.altaria.user.cache.UserCacheService;
 import com.altaria.user.mapper.UserMapper;
 import com.altaria.user.service.LoginService;
 import com.altaria.common.pojos.user.entity.User;
@@ -21,7 +21,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -39,7 +38,7 @@ public class LoginServiceImpl implements LoginService {
     private UserMapper userMapper;
 
     @Autowired
-    private RedisService redisService;
+    private UserCacheService cacheService;
 
     @Autowired
     private RedissonClient redissonClient;
@@ -60,12 +59,12 @@ public class LoginServiceImpl implements LoginService {
                 || (!type.equals(UserConstants.TYPE_LOGIN) && !type.equals(UserConstants.TYPE_REGISTER))){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        if (redisService.getEmailCodeTTL(type, email) - 60 > 0){
+        if (cacheService.getEmailCodeTTL(type, email) - 60 > 0){
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
        threadPoolTaskExecutor.execute(() -> {
            String code = RandomStringUtils.random(6, true, true);
-           redisService.saveEmailCode(type,code, email);
+           cacheService.saveEmailCode(type,code, email);
            String text = type.equals(UserConstants.TYPE_REGISTER)?UserConstants.EMAIL_REGISTER_TEXT:UserConstants.EMAIL_LOGIN_TEXT;
            String subject = type.equals(UserConstants.TYPE_REGISTER)?UserConstants.EMAIL_REGISTER_SUBJECT:UserConstants.EMAIL_LOGIN_SUBJECT;
            sendEmail(email,subject, String.format(text, code));
@@ -78,7 +77,7 @@ public class LoginServiceImpl implements LoginService {
         if (StringUtils.isAnyBlank(loginUser.getUserName(),loginUser.getPassword(), loginUser.getEmail())){
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
-        String code = redisService.getEmailCode(UserConstants.TYPE_REGISTER, loginUser.getEmail());
+        String code = cacheService.getEmailCode(UserConstants.TYPE_REGISTER, loginUser.getEmail());
         if (StringUtils.isEmpty(code) || !code.equals(loginUser.getCode())) {
             return Result.error(StatusCodeEnum.VERIFY_CODE_ERROR);
         }
@@ -132,7 +131,7 @@ public class LoginServiceImpl implements LoginService {
             }
             return Result.error(StatusCodeEnum.USER_OR_PASSWORD_ERROR);
         }else {
-            String code = redisService.getEmailCode(UserConstants.TYPE_LOGIN, user.getEmail());
+            String code = cacheService.getEmailCode(UserConstants.TYPE_LOGIN, user.getEmail());
             if (StringUtils.isEmpty(code) || !code.equals(loginUser.getCode())) {
                 return Result.error(StatusCodeEnum.VERIFY_CODE_ERROR);
             }

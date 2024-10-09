@@ -36,3 +36,4 @@ build/
 .DS_Store
 /user-service/.logs/
 /.logs/
+/.idea/

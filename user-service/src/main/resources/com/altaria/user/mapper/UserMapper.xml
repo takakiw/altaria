@@ -23,12 +23,6 @@
             <if test="role != null">
                 `role` = #{role},
             </if>
-            <if test="useSpace != null">
-                use_space = #{useSpace},
-            </if>
-            <if test="totalSpace != null">
-                total_space = #{totalSpace},
-            </if>
             update_time = #{updateTime}
         </set>
         where id = #{id}

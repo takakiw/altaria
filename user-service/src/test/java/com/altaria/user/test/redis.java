@@ -1,17 +1,12 @@
 package com.altaria.user.test;
 
 import com.altaria.common.constants.UserConstants;
-import com.altaria.common.pojos.user.entity.User;
-import com.altaria.common.utils.JWTUtil;
-import com.altaria.minio.service.MinioService;
 
-import com.altaria.redis.RedisService;
+import com.altaria.user.cache.UserCacheService;
 import com.altaria.user.mapper.UserMapper;
-import io.minio.GetObjectArgs;
 import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
 import io.minio.Result;
-import io.minio.errors.*;
 import io.minio.messages.Item;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
@@ -19,10 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.DigestUtils;
-
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
 @SpringBootTest
 public class redis {
@@ -34,7 +25,7 @@ public class redis {
     private MinioClient minioClient;
 
     @Autowired
-    private RedisService userRedisService;
+    private UserCacheService userRedisService;
 
     @Autowired
     private UserMapper userMapper;

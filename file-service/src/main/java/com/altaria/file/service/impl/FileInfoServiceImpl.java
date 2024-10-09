@@ -9,14 +9,16 @@ import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.common.pojos.file.entity.Space;
+import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.file.service.FileInfoService;
-import com.altaria.minio.config.MinioProperties;
+import com.altaria.file.service.SpaceService;
 import com.altaria.minio.service.MinioService;
-import com.altaria.redis.RedisService;
 import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 
+import com.github.pagehelper.PageHelper;
+import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,7 +49,8 @@ public class FileInfoServiceImpl implements FileInfoService {
 
 
     @Autowired
-    private RedisService redisService;
+    private SpaceService spaceService;
+
 
 
     @Autowired()
@@ -65,19 +69,15 @@ public class FileInfoServiceImpl implements FileInfoService {
             return Result.error(StatusCodeEnum.ILLEGAL_FILE_NAME);
         }
         if(pid.compareTo(FileConstants.ROOT_DIR_ID) != 0){
-            FileInfo cacheFile = redisService.getFileById(pid, uid);
-            if (cacheFile == null) {
-                FileInfo dbFile = fileInfoMapper.getFileById(pid, uid);
-                if (dbFile == null) {
+            FileInfo dbFile = fileInfoMapper.getFileById(pid, uid);
+            if (dbFile == null) {
                     return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-                }
-                redisService.saveFile(dbFile);
-                if (dbFile.getType().equals(FileType.DIRECTORY.getType())) {
-                    return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-                }
+            }
+            if (!dbFile.getType().equals(FileType.DIRECTORY.getType())) {
+                return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
             }
         }
-        FileInfo fileInfoByName = getFileInfoByName(pid, uid, dirName);
+        FileInfo fileInfoByName = fileInfoMapper.getFileChildName(pid, uid, dirName);
         if (fileInfoByName != null) {
             return Result.error(StatusCodeEnum.FILE_ALREADY_EXISTS);
         }
@@ -91,7 +91,6 @@ public class FileInfoServiceImpl implements FileInfoService {
         fileInfo.setSize(0L);
         int insert = fileInfoMapper.insert(fileInfo);
         if (insert > 0) {
-            redisService.saveFile(fileInfo);
             return Result.success(StatusCodeEnum.SUCCESS);
         }
         return Result.error(StatusCodeEnum.ERROR);
@@ -102,26 +101,26 @@ public class FileInfoServiceImpl implements FileInfoService {
         if (fileInfo.getId() == null || uid == null || fileInfo.getPid() == null) {
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
-        FileInfo existFile = redisService.getFileById(fileInfo.getId(), uid);
-        if (existFile == null) {
-            existFile = fileInfoMapper.getFileById(fileInfo.getId(), uid);
-            if (existFile == null){
+        FileInfo existFile = fileInfoMapper.getFileById(fileInfo.getId(), uid);
+        if (existFile == null){
                 return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
-            }
-            redisService.saveFile(existFile);
         }
         if(existFile.getPid().compareTo(fileInfo.getPid()) == 0){
             return Result.success("文件已在目标目录");
         }
         // 非根目录
         if (fileInfo.getPid().compareTo(FileConstants.ROOT_DIR_ID)!= 0) {
-            // 目标目录不能是自己
-            if (existFile.getPid().equals(fileInfo.getId())) {
+            // 目标目录不能是自己的子目录
+            if(!checkPath(fileInfo.getPid(), existFile.getUid(), existFile.getId())){
                 return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+            }
+            FileInfo pFile = fileInfoMapper.getFileById(fileInfo.getPid(), uid);
+            if (pFile == null){
+                    return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
         // 查询是否存在同名文件
-        FileInfo dbFile = getFileInfoByName(fileInfo.getPid(), existFile.getUid(), existFile.getFileName());
+        FileInfo dbFile = fileInfoMapper.getFileChildName(fileInfo.getPid(), uid, existFile.getFileName());
         if (dbFile != null) {
             String newFileName = existFile.getFileName() + "_(rename)";
             existFile.setFileName(newFileName);
@@ -130,36 +129,50 @@ public class FileInfoServiceImpl implements FileInfoService {
         updateFile.setId(existFile.getId());
         updateFile.setFileName(existFile.getFileName());
         updateFile.setPid(fileInfo.getPid());
-        updateFile.setUid(existFile.getUid());
+        updateFile.setUid(uid);
         int update = fileInfoMapper.update(updateFile);
         if (update > 0) {
-            redisService.deleteFile(existFile.getId(), existFile.getUid());
             return Result.success(StatusCodeEnum.SUCCESS);
         }
         return Result.error(StatusCodeEnum.ERROR);
     }
 
+    private boolean checkPath(Long pid, Long uid, Long id) {
+        Stack<Long> stack = new Stack<>();
+        stack.push(pid);
+        while (!stack.isEmpty()) {
+            Long currentId = stack.pop();
+            if (currentId.compareTo(id) == 0){
+                return false;
+            }
+            FileInfo fileInfo = fileInfoMapper.getFileById(currentId, uid);
+            if (fileInfo == null){
+                return false;
+            }
+            if (fileInfo.getPid().compareTo(FileConstants.ROOT_DIR_ID) != 0){
+                stack.push(fileInfo.getPid());
+            }
+        }
+        return true;
+    }
+
     @Override
     public Result renameFile(FileInfo fileInfo, Long uid) {
         if (fileInfo.getId() == null || uid == null ){
-            return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
         if (StringUtils.isBlank(fileInfo.getFileName()) || !fileInfo.getFileName().matches(FileConstants.INVALID_DIR_NAME_REGEX)){
             return Result.error(StatusCodeEnum.ILLEGAL_FILE_NAME);
         }
-        FileInfo existFile = redisService.getFileById(fileInfo.getId(), uid);
-        if (existFile == null) {
-            existFile = fileInfoMapper.getFileById(fileInfo.getId(), uid);
-            if (existFile == null){
-                return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
-            }
-            redisService.saveFile(existFile);
+        FileInfo existFile = fileInfoMapper.getFileById(fileInfo.getId(), uid);
+        if (existFile == null){
+            return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
         if (existFile.getFileName().equals(fileInfo.getFileName())){
             return Result.success(StatusCodeEnum.SUCCESS);
         }
         // 查询是否存在同名文件
-        FileInfo dbFile = getFileInfoByName(existFile.getPid(), existFile.getUid(), fileInfo.getFileName());
+        FileInfo dbFile = fileInfoMapper.getFileChildName(existFile.getPid(), existFile.getUid(), fileInfo.getFileName());
         if (dbFile != null) {
             return Result.error(StatusCodeEnum.FILE_ALREADY_EXISTS);
         }
@@ -169,7 +182,6 @@ public class FileInfoServiceImpl implements FileInfoService {
         updateFile.setUid(existFile.getUid());
         int update = fileInfoMapper.update(updateFile);
         if (update > 0) {
-            redisService.deleteFile(existFile.getId(), existFile.getUid());
             return Result.success(StatusCodeEnum.SUCCESS);
         }
         return Result.error(StatusCodeEnum.ERROR);
@@ -181,24 +193,23 @@ public class FileInfoServiceImpl implements FileInfoService {
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
         if (id.compareTo(FileConstants.ROOT_DIR_ID) != 0){
-            FileInfo dbFile = redisService.getFileById(id, uid);
-            if (dbFile == null){
-                dbFile = fileInfoMapper.getFileById(id, uid);
-                if (dbFile == null) {
-                    return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-                }
-                redisService.saveFile(dbFile);
+            FileInfo dbFile = fileInfoMapper.getFileById(id, uid);
+            if (dbFile == null) {
+                return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+            }
+            if (!dbFile.getType().equals(FileType.DIRECTORY.getType())){
+                return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
-        PageHelper.startPage(page, count);
         FileInfo query = new FileInfo();
         query.setUid(uid);
         query.setPid(id);
         query.setType(type);
         query.setFileName(fileName);
         query.setStatus(status);
-        Page<FileInfo> select = fileInfoMapper.select(query);
-        return Result.success(new PageResult<FileInfo>(select.getTotal(), select.getResult()));
+        PageHelper.startPage(page, count);
+        Page<FileInfo> infos = fileInfoMapper.select(query);
+        return Result.success(new PageResult<FileInfo>(infos.getTotal(), infos.getResult()));
     }
 
     @Override
@@ -208,13 +219,9 @@ public class FileInfoServiceImpl implements FileInfoService {
         }
         List<FileInfo> path = new ArrayList<>();
         while (id.compareTo(FileConstants.ROOT_DIR_ID) != 0) {
-            FileInfo fileInfo = redisService.getFileById(id, uid);
-            if (fileInfo == null){
-                fileInfo = fileInfoMapper.getFileById(id, uid);
-                if (fileInfo == null || fileInfo.getType().equals(FileType.DIRECTORY.getType())) {
-                    return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
-                }
-                redisService.saveFile(fileInfo);
+            FileInfo fileInfo = fileInfoMapper.getFileById(id, uid);
+            if (fileInfo == null || !fileInfo.getType().equals(FileType.DIRECTORY.getType())){
+                return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
             path.add(0, fileInfo);
             id = fileInfo.getPid();
@@ -226,40 +233,31 @@ public class FileInfoServiceImpl implements FileInfoService {
 
     @Override
     public void preview(HttpServletResponse response, Long id, Long uid) {
-        if (id == null || uid == null) {
+        /*if (id == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
-        }
-        FileInfo dbFile = redisService.getFileById(id, uid);
-        if (dbFile == null){
-            dbFile = fileInfoMapper.getFileById(id, uid);
-            if (dbFile != null){
-                redisService.saveFile(dbFile);
-            }
-        }
-        if (dbFile == null || dbFile.getType().equals(FileType.DIRECTORY.getType())) {
+        }*/
+        FileInfo dbFile = fileInfoMapper.getFileById(id, uid);
+        if (dbFile == null
+                || dbFile.getType().equals(FileType.DIRECTORY.getType())
+                || !dbFile.getType().equals(FileType.VIDEO.getType())) {
             writerResponse(response, StatusCodeEnum.FILE_CANNOT_PREVIEW); // 文件不能预览
             return;
         }
         if (dbFile.getUrl() == null){
             writerResponse(response, StatusCodeEnum.FILE_TRANSCODING);
         }
-        minioService.downloadFile(dbFile.getUrl(), response);
+        minioService.preview(dbFile.getUrl(), response);
     }
 
     @Override
     public void previewVideo(HttpServletRequest request, HttpServletResponse response, Long id, Long uid) {
-        if (uid == null){
-            writerResponse(response, StatusCodeEnum.UNAUTHORIZED);
-            return;
-        }
-        FileInfo dbFile = redisService.getFileById(id, uid);
-        if (dbFile == null){
-            dbFile = fileInfoMapper.getFileById(id, uid);
-            if (dbFile != null){
-                redisService.saveFile(dbFile);
-            }
-        }
-        if (dbFile == null || dbFile.getType().equals(FileType.DIRECTORY.getType()) || !dbFile.getType().equals(FileType.VIDEO.getType())) {
+        /*if (id == null || uid == null) {
+            writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
+        }*/
+        FileInfo dbFile = fileInfoMapper.getFileById(id, uid);
+        if (dbFile == null
+                || dbFile.getType().equals(FileType.DIRECTORY.getType())
+                || !dbFile.getType().equals(FileType.VIDEO.getType())) {
             writerResponse(response, StatusCodeEnum.VIDEO_NOT_EXISTS);
             return;
         }
@@ -276,17 +274,11 @@ public class FileInfoServiceImpl implements FileInfoService {
 
     @Override
     public void download(HttpServletResponse response, Long id, Long uid) {
-        if (id == null || uid == null) {
+        /*if (id == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
             return;
-        }
-        FileInfo dbFile = redisService.getFileById(id, uid);
-        if (dbFile == null){
-            dbFile = fileInfoMapper.getFileById(id, uid);
-            if (dbFile != null){
-                redisService.saveFile(dbFile);
-            }
-        }
+        }*/
+        FileInfo dbFile = fileInfoMapper.getFileById(id, uid);
         if (dbFile == null || dbFile.getType().equals(FileType.DIRECTORY.getType())) {
             writerResponse(response, StatusCodeEnum.FILE_NOT_EXISTS);
         }
@@ -302,11 +294,11 @@ public class FileInfoServiceImpl implements FileInfoService {
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
         List<FileInfo> dbFiles = fileInfoMapper.getFileByIds(ids, uid, FileConstants.STATUS_USE);
-        if (dbFiles.isEmpty()){
+        if (dbFiles == null || dbFiles.isEmpty()){
             return Result.success();
         }
         ids = dbFiles.stream().map(FileInfo::getId).toList();
-        redisService.deleteFileBatch(ids, uid);
+        List<Long> pids = dbFiles.stream().map(FileInfo::getPid).toList();
         fileInfoMapper.updateStatusBatch(ids, FileConstants.STATUS_DELETE, LocalDateTime.now());
         return Result.success();
     }
@@ -318,7 +310,7 @@ public class FileInfoServiceImpl implements FileInfoService {
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
         List<FileInfo> dbFiles = fileInfoMapper.getFileByIds(ids, uid, null);
-        if (dbFiles.isEmpty()){
+        if (dbFiles == null || dbFiles.isEmpty()){
             return Result.success();
         }
         long size = 0;
@@ -341,22 +333,43 @@ public class FileInfoServiceImpl implements FileInfoService {
             }
         }
         minioService.deleteFile(urls);
-        redisService.deleteFileBatch(ids, uid);
         fileInfoMapper.deleteBatch(ids, uid);
-        // TODO 更新用户使用的空间大小
+        spaceService.updateSpace(uid, -size, -ids.size());
         return Result.success();
     }
 
     @Override
-    public Result upload(Long uid, MultipartFile file, String md5, Integer index, Integer total) {
+    @Transactional(rollbackFor = Exception.class)
+    public Result upload(Long uid, Long pid, MultipartFile file, String md5, Integer index, Integer total) {
+        if (uid == null || file == null || file.isEmpty()){
+            return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
+        }
+        if (index == 0){
+            FileInfo fileByMd5 = fileInfoMapper.getFileByMd5(md5, uid);
+            if (fileByMd5 != null){
+                FileInfo dbFile = new FileInfo();
+                dbFile.setId(IdUtil.getSnowflake(1, 1).nextId());
+                dbFile.setUrl(fileByMd5.getUrl());
+                dbFile.setMd5(fileByMd5.getMd5());
+                dbFile.setFileName(file.getOriginalFilename());
+                dbFile.setPid(pid);
+                dbFile.setUid(uid);
+                fileInfoMapper.insert(dbFile);
+                spaceService.updateSpace(uid, fileByMd5.getSize(),1);
+                return Result.success(100);
+            }
+        }
+        else if (index == total - 1){
+
+        }else {
+
+        }
+
+        // TODO 更新用户使用的空间大小
         return null;
     }
 
 
-    public FileInfo getFileInfoByName(Long pid, Long uid, String fileName){
-        FileInfo dbFile = fileInfoMapper.getFileChildName(pid, uid, fileName);
-        return dbFile;
-    }
 
     public void writerResponse(HttpServletResponse response, StatusCodeEnum statusCode){
         response.setContentType("application/json;charset=UTF-8");

@@ -23,6 +23,31 @@ spring:
       httpclient:
         enabled: true
         max-connections: 1000 # 最大连接数
-        read-timeout: 1000 # 读取超时时间
-        connect-timeout: 1000 # 连接超时时间
-        time-to-live: 1000 # 存活时间
+        connection-timeout: 3000 # 连接超时时间
+        ok-http:
+          read-timeout: 3000 # 读超时时间
+seata:
+  registry:
+    type: nacos
+    nacos:
+      server-addr: 192.168.96.132:8848
+      application: seata-server
+      username: nacos
+      password: nacos
+      group: DEFAULT_GROUP
+      cluster: default
+  config:
+    type: nacos
+    nacos:
+      server-addr: 192.168.96.132:8848
+      username: nacos
+      password: nacos
+      group: SEATA_GROUP
+      namespace:
+      data-id: seata-server.properties
+  tx-service-group: default_tx_group
+  service:
+    vgroup-mapping:
+      default_tx_group: default
+    vgroupMapping:
+      default_tx_group: default

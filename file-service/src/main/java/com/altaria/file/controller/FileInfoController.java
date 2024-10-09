@@ -4,8 +4,11 @@ import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
-import com.altaria.file.feign.client.UserServiceClient;
+
+import com.altaria.common.pojos.file.entity.Space;
+import com.altaria.common.pojos.file.vo.SpaceVO;
 import com.altaria.file.service.FileInfoService;
+import com.altaria.file.service.SpaceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
@@ -25,15 +28,8 @@ public class FileInfoController {
     @Autowired
     private FileInfoService fileInfoService;
 
-
     @Autowired
-    private UserServiceClient userServiceClient;
-
-
-    @GetMapping("/{id}")
-    public Result get(@PathVariable("id") Long id){
-        return userServiceClient.getShareUserById(id);
-    }
+    private SpaceService spaceService;
 
     /**
      * 上传·
@@ -45,11 +41,12 @@ public class FileInfoController {
      */
     @PostMapping("/file/upload")
     public Result upload(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
+                         @NotNull Long pid,
                          @NotNull MultipartFile file,
                          @NotNull String md5,
                          @NotNull Integer index,
                          @NotNull Integer total) {
-        return fileInfoService.upload(uid, file, md5, index, total);
+        return fileInfoService.upload(uid, pid, file, md5, index, total);
     }
 
     /**
@@ -166,9 +163,22 @@ public class FileInfoController {
         return fileInfoService.deleteFile(ids, uid);
     }
 
-    @DeleteMapping("file/remove/{ids}")
+    @DeleteMapping("/file/remove/{ids}")
     public Result remove(@PathVariable("ids") List<Long> ids,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileInfoService.removeFile(ids, uid);
     }
+
+
+    @GetMapping("/space/space")
+    public Result<SpaceVO> space(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
+        return spaceService.getUsedSpace(uid);
+    }
+
+    @PutMapping("/space/update")
+    public Result updateSpace(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
+                                       @RequestBody Space space) {
+        return spaceService.updateSpace(uid, space.getUseSpace(), space.getFileCount());
+    }
+
 }

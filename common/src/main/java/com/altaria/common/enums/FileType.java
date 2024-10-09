@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public enum FileType {
-    DIRECTORY(0),
+    DIRECTORY(0, "application/x-directory"),
     IMAGE(1,
             "image/jpeg",
             "image/png",

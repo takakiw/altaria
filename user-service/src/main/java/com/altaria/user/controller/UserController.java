@@ -20,7 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
-@RequestMapping("/user/user")
+@RequestMapping("/user")
 @Validated
 public class UserController {
 
@@ -34,17 +34,11 @@ public class UserController {
      * @param id 用户id
      * @return 用户信息
      */
-    @GetMapping("/{id}")
+    @GetMapping("/info/{id}")
     public Result<UserVO> getUserById(@PathVariable("id") @NotNull Long id,
                                       @RequestHeader(value = UserConstants.USER_ID, required = false) Long uId) {
         return userService.getUserById(id, uId);
     }
-
-    @GetMapping("/space")
-    public Result getShareUserById(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uId) {
-        return userService.getSpaceUserById(uId);
-    }
-
 
 
     /**

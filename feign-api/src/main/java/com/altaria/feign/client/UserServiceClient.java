@@ -14,7 +14,5 @@ import org.springframework.web.bind.annotation.RequestHeader;
 @FeignClient(contextId = "UserServiceClient", name = "gateway-service", fallbackFactory = UserServiceClientFallbackFactory.class)
 public interface UserServiceClient {
 
-    @GetMapping("/user/user/space")
-    public Result getShareUserById(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uId);
 
 }

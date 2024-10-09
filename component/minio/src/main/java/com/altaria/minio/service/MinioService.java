@@ -17,14 +17,13 @@ public interface MinioService {
 
 
     @Async
-    boolean deleteFile(String fileName);
+    void deleteFile(String fileName);
 
     @Async
-    boolean deleteFile(List<String> fileNames);
+    void deleteFile(List<String> fileNames);
 
     void downloadFile(String fileName, HttpServletResponse response);
+    public void preview(String fileName, HttpServletResponse response);
 
     void previewVideo(String fileName, HttpServletResponse response, long start, long end);
-
-
 }

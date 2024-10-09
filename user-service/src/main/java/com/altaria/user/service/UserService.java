@@ -18,5 +18,4 @@ public interface UserService {
 
     Result sendEmailCode(String email);
 
-    Result getSpaceUserById(Long uId);
 }

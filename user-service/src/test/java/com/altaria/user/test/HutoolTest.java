@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.List;
+
 @SpringBootTest
 public class HutoolTest {
 
@@ -25,6 +27,15 @@ public class HutoolTest {
         user1.setAvatar("https://www.baidu.com");
         user1.setId(1L);
         userMapper.updateUser(user1);
+    }
+
+    @Test
+    public void test1() {
+        Object o = null;
+        String s = JSONObject.toJSONString(o);
+        System.out.println(s);
+        List<User> users = JSONObject.parseArray(s, User.class);
+        System.out.println(users);
     }
 
 

@@ -4,6 +4,7 @@ import com.altaria.minio.config.MinioConfig;
 import com.altaria.minio.config.MinioProperties;
 import com.altaria.minio.service.MinioService;
 import io.minio.*;
+import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -55,12 +56,7 @@ public class MinioServiceImpl implements MinioService {
     }
 
     @Override
-    public boolean deleteFile(String fileName) throws RuntimeException{
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+    public void deleteFile(String fileName) throws RuntimeException{
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder()
@@ -68,37 +64,38 @@ public class MinioServiceImpl implements MinioService {
                             .object(fileName)
                             .build()
             );
+            System.out.println(minioProperties);
             log.info("成功删除文件 {}", fileName);
-            return true;
         } catch (Exception e) {
             log.error("minio文件删除失败", e);
-            return false;
         }
     }
 
     @Override
-    public boolean deleteFile(List<String> fileNames) {
+    public void deleteFile(List<String> fileNames) {
         // 检查输入参数
         if (fileNames == null || fileNames.size() == 0) {
             log.warn("没有提供要删除的文件名");
-            return true;
         }
 
         List<DeleteObject> deleteObjects = new ArrayList<>();
         for (String fileName : fileNames) {
             deleteObjects.add(new DeleteObject(fileName));
         }
+        Iterable<Result<DeleteError>> results =
+                minioClient.removeObjects(
+                        RemoveObjectsArgs.builder().
+                                bucket(minioProperties.getBucketName()).
+                                objects(deleteObjects).
+                                build());
 
         try {
-            minioClient.removeObjects(RemoveObjectsArgs.builder()
-                    .bucket(minioProperties.getBucketName())
-                    .objects(deleteObjects)
-                    .build());
-            log.info("成功删除 {}", Arrays.toString(fileNames.toArray()));
-            return true;
+            for (Result<DeleteError> result : results) {
+                DeleteError error = result.get();
+                log.error("minio批量删除文件失败：" + error.objectName() + "; " + error.message());
+            }
         } catch (Exception e) {
             log.error("minio文件批量删除失败", e);
-            return false;
         }
     }
 
@@ -137,6 +134,41 @@ public class MinioServiceImpl implements MinioService {
         }catch (Exception e){
             log.warn("文件不存在！");
             writerResponse(response, 404, "文件不存在！");
+            return;
+        }
+    }
+
+    @Override
+    public void preview(String fileName, HttpServletResponse response) {
+        StatObjectResponse statObject = null;
+        try {
+            statObject = minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(minioProperties.getBucketName())
+                            .object(fileName)
+                            .build());
+        } catch (Exception e) {
+            log.error("minio文件{}元数据获取失败", fileName);
+            writerResponse(response, 404, "文件不存在！");
+            return;
+        }
+        // 设置响应头
+        response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+        response.setHeader("Content-Length", String.valueOf(statObject.size()));
+        response.setContentType(statObject.contentType()); // 根据视频格式设置
+        response.setCharacterEncoding("utf-8");
+        // 从 MinIO 中读取数据并写入响应
+        try (InputStream inputStream = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(minioProperties.getBucketName())
+                        .object(fileName)
+                        .build())) {
+            IOUtils.copy(inputStream, response.getOutputStream());
+            response.flushBuffer();
+            inputStream.close();
+        } catch (Exception e) {
+            log.error("获取{}文件流失败!", fileName);
+            writerResponse(response, 500, "获取文件流失败!");
             return;
         }
     }

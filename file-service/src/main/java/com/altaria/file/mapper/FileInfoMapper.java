@@ -39,4 +39,7 @@ public interface FileInfoMapper {
     List<FileInfo> getFileByIds(@Param("ids") List<Long> ids, @Param("uid") Long uid, @Param("status") Integer status);
 
     int updateStatusBatch(@Param("ids") List<Long> ids, @Param("status") Integer status, @Param("updateTime") LocalDateTime updateTime);
+
+    @Select("SELECT * FROM file WHERE md5 = #{md5} AND uid = #{uid}")
+    FileInfo getFileByMd5(String md5, Long uid);
 }
