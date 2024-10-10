@@ -1,5 +1,6 @@
 package com.altaria.file.controller;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
@@ -96,12 +97,10 @@ public class FileInfoController {
     @GetMapping("/file/{id}")
     public Result<PageResult<FileInfo>> get(@PathVariable("id") Long id,
                                             @RequestParam(value = "type", required = false) Integer type,
-                                            @RequestParam(value = "status", required = false, defaultValue = "0") Integer status,
                                             @RequestParam(value = "fileName" , required = false) String fileName,
-                                            @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
-                                            @RequestParam(value = "count", required = false, defaultValue = "50") Integer count,
-                                            @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
-        return fileInfoService.getPagedFileList(id, uid, type,fileName, status, page, count);
+                                            @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
+                                            @RequestParam(value = "order", required = false, defaultValue = "0") Integer order) {
+        return fileInfoService.getPagedFileList(id, uid, type,fileName, order);
     }
 
     /**

@@ -63,6 +63,8 @@ public class Lang3Test {
 
     @Test
     public void test3() throws Exception {
-        System.out.println(FileType.getFileType("text/plain").getType());
+        System.out.println("a".compareTo("b"));
+        System.out.println("a".compareTo("a"));
+        System.out.println("b".compareTo("a"));
     }
 }

@@ -1,0 +1,65 @@
+package com.altaria.file;
+
+
+import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.file.cache.FileCacheService;
+import com.altaria.file.mapper.FileInfoMapper;
+import com.github.pagehelper.Page;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+
+import java.util.List;
+import java.util.Set;
+
+@SpringBootTest
+public class CacheTest {
+
+    @Autowired
+    private FileInfoMapper fileInfoMapper;
+
+    @Autowired
+    private FileCacheService cacheService;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    @Test
+    public void testCache() {
+        FileInfo fileInfo = new FileInfo();
+        fileInfo.setUid(1L);
+        Page<FileInfo> select = fileInfoMapper.select(fileInfo);
+        List<FileInfo> result = select.getResult();
+        cacheService.saveAllChildren(1L, 0L, result);
+
+
+        /*redisTemplate.opsForZSet().add("test", "a", 1);
+        redisTemplate.opsForZSet().add("test", "b", 2);
+        redisTemplate.opsForZSet().add("test", "c", 3);
+        redisTemplate.opsForZSet().range("test", 0, -1).forEach(System.out::println);*/
+
+        List<Long> longs = redisTemplate.opsForZSet().range("parent:update1:0", 0, -1).stream().map(o -> (Long) o).toList();
+        System.out.println(longs);
+        List<Long> longs1 = redisTemplate.opsForZSet().range("parent:update11:0", 0, -1).stream().map(o -> (Long) o).toList();
+        System.out.println(longs1.isEmpty());
+
+
+        List<Long> longs2 = redisTemplate.opsForZSet().range("parent:size1:0", 0, -1).stream().map(o -> (Long) o).toList();
+        System.out.println(longs2);
+        List<Long> longs3 = redisTemplate.opsForZSet().range("parent:size11:0", 0, -1).stream().map(o -> (Long) o).toList();
+        System.out.println(longs3.isEmpty());
+
+        Set<ZSetOperations.TypedTuple<Object>> typedTuples = redisTemplate.opsForZSet().rangeWithScores("parent:name1:0", 0, -1);
+        for (ZSetOperations.TypedTuple<Object> typedTuple : typedTuples){
+            System.out.println(typedTuple.getValue() + " " + typedTuple.getScore());
+        }
+    }
+
+
+    @Test
+    public void testCache1() {
+        fileInfoMapper.selectOrder(1L, null, 0, null, 1).forEach(System.out::println);
+    }
+}

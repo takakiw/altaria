@@ -38,7 +38,7 @@
         </where>
     </update>
     <update id="updateStatusBatch">
-        update file set status = #{status}, update_time = #{updateTime} where id in
+        update file set status = #{status}, update_time = #{updateTime} where uid = #{uid} and id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
@@ -60,7 +60,7 @@
                 and url = #{url}
             </if>
             <if test="fileName != null and fileName != ''">
-                and file_name like #{fileName}
+                and file_name like CONCAT('%', #{fileName}, '%')
             </if>
             <if test="type != null">
                 and type = #{type}
@@ -75,6 +75,7 @@
                 and status = #{status}
             </if>
         </where>
+
     </select>
     <select id="getFileById" resultType="com.altaria.common.pojos.file.entity.FileInfo">
         select * from file where id = #{id} and status = 0
@@ -98,5 +99,38 @@
             </if>
             and uid = #{uid}
         </where>
+    </select>
+    <select id="selectOrder" resultType="com.altaria.common.pojos.file.entity.FileInfo">
+        select * from file
+        <where>
+            uid = #{uid}
+            <if test="fileName != null and fileName != ''">
+                and file_name like CONCAT('%', #{fileName}, '%')
+            </if>
+            <if test="type != null">
+                and type = #{type}
+            </if>
+            <if test="pid != null">
+                and pid = #{pid}
+            </if>
+        </where>
+        <if test="order == 0">
+            order by update_time desc
+        </if>
+        <if test="order == 1">
+            order by update_time asc
+        </if>
+        <if test="order == 2">
+            order by size asc
+        </if>
+        <if test="order == 3">
+            order by size desc
+        </if>
+        <if test="order == 4">
+            order by file_name asc
+        </if>
+        <if test="order == 5">
+            order by file_name desc
+        </if>
     </select>
 </mapper>

@@ -16,7 +16,7 @@ public interface FileInfoService {
 
     Result renameFile(FileInfo fileInfo, Long uid);
 
-    Result<PageResult<FileInfo>> getPagedFileList(Long id, Long uid, Integer type,String fileName, Integer status, Integer page, Integer count);
+    public Result<PageResult<FileInfo>> getPagedFileList(Long id, Long uid, Integer type, String fileName, Integer order);
 
     Result getPath(Long id, Long uid);
 

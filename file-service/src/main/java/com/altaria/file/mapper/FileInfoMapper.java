@@ -8,6 +8,7 @@ import com.github.pagehelper.Page;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,8 +39,14 @@ public interface FileInfoMapper {
 
     List<FileInfo> getFileByIds(@Param("ids") List<Long> ids, @Param("uid") Long uid, @Param("status") Integer status);
 
-    int updateStatusBatch(@Param("ids") List<Long> ids, @Param("status") Integer status, @Param("updateTime") LocalDateTime updateTime);
+    int updateStatusBatch(@Param("uid") Long uid, @Param("ids") List<Long> ids, @Param("status") Integer status, @Param("updateTime") LocalDateTime updateTime);
 
     @Select("SELECT * FROM file WHERE md5 = #{md5} AND uid = #{uid}")
-    FileInfo getFileByMd5(String md5, Long uid);
+    FileInfo getFileByMd5(@Param("md5") String md5,@Param("uid") Long uid);
+
+
+    @Update("UPDATE file SET size = size + #{size} WHERE pid = #{pid} AND uid = #{uid}")
+    int updateParentSize(@Param("pid") Long uid, @Param("pid") Long pid, @Param("size") Long size);
+
+    List<FileInfo> selectOrder(@Param("uid") Long uid, @Param("pid") Long pid, @Param("type") Integer type, @Param("fileName") String fileName, @Param("order") Integer order);
 }

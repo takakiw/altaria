@@ -51,3 +51,8 @@ seata:
       default_tx_group: default
     vgroupMapping:
       default_tx_group: default
+
+
+temp:
+  file:
+    path: "D:\\zhawu\\temp"
