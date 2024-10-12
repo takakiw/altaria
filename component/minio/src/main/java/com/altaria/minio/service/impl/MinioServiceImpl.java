@@ -141,6 +141,9 @@ public class MinioServiceImpl implements MinioService {
     @Override
     public void preview(String fileName, HttpServletResponse response) {
         StatObjectResponse statObject = null;
+        if (response.isCommitted()){
+            return;
+        }
         try {
             statObject = minioClient.statObject(
                     StatObjectArgs.builder()
@@ -157,6 +160,9 @@ public class MinioServiceImpl implements MinioService {
         response.setHeader("Content-Length", String.valueOf(statObject.size()));
         response.setContentType(statObject.contentType()); // 根据视频格式设置
         response.setCharacterEncoding("utf-8");
+        if (response.isCommitted()){
+            return;
+        }
         // 从 MinIO 中读取数据并写入响应
         try (InputStream inputStream = minioClient.getObject(
                 GetObjectArgs.builder()
@@ -168,6 +174,9 @@ public class MinioServiceImpl implements MinioService {
             inputStream.close();
         } catch (Exception e) {
             log.error("获取{}文件流失败!", fileName);
+            if (response.isCommitted()){
+                return;
+            }
             writerResponse(response, 500, "获取文件流失败!");
             return;
         }
@@ -179,6 +188,9 @@ public class MinioServiceImpl implements MinioService {
     @Override
     public void previewVideo(String fileName, HttpServletResponse response, long start, long end) {
         StatObjectResponse statObject = null;
+        if (response.isCommitted()){
+            return;
+        }
         try {
             statObject = minioClient.statObject(
                     StatObjectArgs.builder()
@@ -203,6 +215,9 @@ public class MinioServiceImpl implements MinioService {
         response.setHeader("Content-Length", String.valueOf(end - start + 1));
         response.setContentType(statObject.contentType()); // 根据视频格式设置
         response.setCharacterEncoding("utf-8");
+        if (response.isCommitted()){
+            return;
+        }
         // 从 MinIO 中读取数据并写入响应
         try (InputStream inputStream = minioClient.getObject(
                 GetObjectArgs.builder()
@@ -216,16 +231,26 @@ public class MinioServiceImpl implements MinioService {
             inputStream.close();
         } catch (Exception e) {
             log.error("获取{}视频流失败!", fileName);
+            if (response.isCommitted()){
+                return;
+            }
             writerResponse(response, 500, "获取视频流失败!");
             return;
         }
     }
 
     private void writerResponse(HttpServletResponse response, int i, String s) {
+        if (response.isCommitted()){
+            return;
+        }
         response.setStatus(i);
         response.setContentType("text/plain;charset=utf-8");
         response.setCharacterEncoding("utf-8");
         try {
+            // 判断连接是否关闭
+            if (response.isCommitted()){
+                return;
+            }
             response.getWriter().write(s);
         } catch (Exception e) {
             log.error("响应写入失败", e);

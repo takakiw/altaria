@@ -168,6 +168,12 @@ public class FileInfoController {
         return fileInfoService.removeFile(ids, uid);
     }
 
+    @PutMapping("/file/restore/{ids}")
+    public Result restore(@PathVariable("ids") List<Long> ids,
+                         @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
+        return fileInfoService.restoreFile(ids, uid);
+    }
+
 
     @GetMapping("/space/space")
     public Result<SpaceVO> space(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
@@ -177,7 +183,7 @@ public class FileInfoController {
     @PutMapping("/space/update")
     public Result updateSpace(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
                                        @RequestBody Space space) {
-        return spaceService.updateSpace(uid, space.getUseSpace(), space.getFileCount());
+        return spaceService.updateSpace(uid, space.getUseSpace());
     }
 
 }

@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,7 @@ public class FileCacheService {
     private static final String FILE_PARENT_NAME_PREFIX = "parent:name"; // zset
     private static final String FILE_PARENT_SIZE_PREFIX = "parent:size"; // zset
     private static final String SPACE_PREFIX = "space:";
-    private static final long FILE_UPLOAD_EXPIRATION_TIME = 1024 * 1024 * 1024; // 1天
+    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24L; // 1天
     private static final long FILE_NULL_EXPIRATION_TIME = 60 * 5L; // 5分钟
 
 
@@ -58,10 +59,15 @@ public class FileCacheService {
         redisTemplate.expire(FILE_PREFIX + fileInfo.getUid() + ":" + fileInfo.getId(), FILE_EXPIRATION_TIME, TimeUnit.SECONDS);
     }
 
+    public void saveNullFile(Long uid, Long pid) {
+        redisTemplate.opsForHash().putAll(FILE_PREFIX + uid + ":" + pid, Map.of("fileName", "null"));
+        redisTemplate.expire(FILE_PREFIX + uid + ":" + pid, FILE_NULL_EXPIRATION_TIME, TimeUnit.SECONDS);
+    }
+
     public void saveFileBatch(List<FileInfo> fileInfoList){
         for (FileInfo fileInfo : fileInfoList){
             redisTemplate.opsForHash().putAll(FILE_PREFIX + fileInfo.getUid() + ":" + fileInfo.getId(), BeanUtil.beanToMap(fileInfo));
-            redisTemplate.expire(FILE_PREFIX + fileInfo.getUid() + ":" + fileInfo.getId(), FILE_EXPIRATION_TIME, TimeUnit.SECONDS);
+            redisTemplate.expire(FILE_PREFIX + fileInfo.getUid() + fileInfo.getId(), FILE_EXPIRATION_TIME, TimeUnit.SECONDS);
         }
     }
 
@@ -76,6 +82,9 @@ public class FileCacheService {
 
     public FileInfo getFile(Long uid, Long fid){
         Map<Object, Object> data = redisTemplate.opsForHash().entries(FILE_PREFIX + uid + ":" + fid);
+        if (data == null || data.isEmpty()){
+            return null;
+        }
         return BeanUtil.copyProperties(data, FileInfo.class);
     }
 
@@ -83,21 +92,39 @@ public class FileCacheService {
         List<FileInfo> fileInfoList = new ArrayList<>();
         for (Long fid : fids){
             Map<Object, Object> data = redisTemplate.opsForHash().entries(FILE_PREFIX + uid + ":" + fid);
+            if (data == null || data.isEmpty()){
+                continue;
+            }
             fileInfoList.add(BeanUtil.copyProperties(data, FileInfo.class));
         }
         return fileInfoList;
     }
 
-    public void updateFileName(Long uid, Long fid, String fileName){
+
+    public void updateFileName(Long uid, Long pid, Long fid, String fileName, String oldName) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PREFIX + uid + ":" + fid))){
             redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "fileName", fileName);
+            redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "updateTime", LocalDateTime.now());
+        }
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PARENT_NAME_PREFIX + uid + ":" + pid))){
+            redisTemplate.opsForZSet().remove(FILE_PARENT_NAME_PREFIX + uid + ":" + pid, oldName);
+            redisTemplate.opsForZSet().add(FILE_PARENT_NAME_PREFIX + uid + ":" + pid, fileName, fid);
+            redisTemplate.opsForZSet().add(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid, fid, LocalDateTime.now().toEpochSecond(ZoneOffset.UTC));
         }
     }
 
-    public void updateFileSize(Long uid, Long fid, Long size){
+    public void updateFileSize(Long uid, Long fid, Long pid, Long size){
         if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PREFIX + uid + ":" + fid))){
-            Long oldSize = (Long) redisTemplate.opsForHash().get(FILE_PREFIX + uid + ":" + fid, "size");
-            redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "size", size + oldSize);
+            Object oSize = redisTemplate.opsForHash().get(FILE_PREFIX + uid + ":" + fid, "size");
+            if (oSize != null){
+                Long oldSize = Long.valueOf(oSize.toString());
+                redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "size", size + oldSize);
+                redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "updateTime", System.currentTimeMillis());
+            }
+        }
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PARENT_SIZE_PREFIX + uid + ":" + pid))){ // 更新父目录大小
+            redisTemplate.opsForZSet().incrementScore(FILE_PARENT_SIZE_PREFIX + uid + ":" + pid, uid, size);
+            redisTemplate.opsForZSet().add(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid, fid, LocalDateTime.now().toEpochSecond(ZoneOffset.UTC));
         }
     }
 
@@ -110,6 +137,7 @@ public class FileCacheService {
     public void updateFileParent(Long uid, Long fid, Long pid){
        if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PREFIX + uid + ":" + fid))){
            redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "pid", pid);
+           redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "updateTime", LocalDateTime.now());
        }
     }
 
@@ -127,6 +155,7 @@ public class FileCacheService {
                 zSetOperations.add(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid, fileInfo.getId(), updateTimeScore);
                 zSetOperations.add(FILE_PARENT_NAME_PREFIX + uid + ":" + pid,fileInfo.getFileName(), fileInfo.getId());
                 zSetOperations.add(FILE_PARENT_SIZE_PREFIX + uid + ":" + pid, fileInfo.getId(), fileInfo.getSize());
+                saveFile(fileInfo);
             }
             return null;
         });
@@ -136,7 +165,7 @@ public class FileCacheService {
     }
 
     public void addChildren(Long uid, Long pid, FileInfo fileInfo){
-        if (fileInfo == null || Boolean.FALSE.equals(redisTemplate.hasKey(FILE_PREFIX + uid + ":" + fileInfo.getId()))){
+        if (fileInfo == null || Boolean.FALSE.equals(redisTemplate.hasKey(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid))){
             return;
         }
         redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
@@ -216,11 +245,6 @@ public class FileCacheService {
 
     public Space getSpace(Long uid) {
         return (Space) redisTemplate.opsForValue().get(SPACE_PREFIX + uid);
-    }
-
-    public void saveNullFile(Long uid, Long pid) {
-        redisTemplate.opsForHash().putAll(FILE_PREFIX + uid + ":" + pid, Map.of("fileName", "null"));
-        redisTemplate.expire(FILE_PREFIX + uid + ":" + pid, FILE_NULL_EXPIRATION_TIME, TimeUnit.SECONDS);
     }
 
 

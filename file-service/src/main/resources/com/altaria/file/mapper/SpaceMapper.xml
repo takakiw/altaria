@@ -4,16 +4,16 @@
     <update id="updateSpace" parameterType="com.altaria.common.pojos.file.entity.Space">
         update space
         <set>
-            <if test="use_space!= null">
+            <if test="useSpace != null">
                 use_space = use_space + #{useSpace},
             </if>
-            <if test="total_space!= null">
+            <if test="totalSpace != null">
                 total_space = total_space + #{totalSpace},
-            </if>
-            <if test="file_count!= null">
-                file_count = file_count + #{fileCount},
             </if>
         </set>
         where uid = #{uid}
+        <if test="useSpace != null or totalSpace != null">
+            <!-- 确保在 set 语句有更新的情况下才执行 -->
+        </if>
     </update>
 </mapper>

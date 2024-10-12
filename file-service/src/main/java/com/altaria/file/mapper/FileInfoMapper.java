@@ -30,7 +30,7 @@ public interface FileInfoMapper {
 
     FileInfo getFileById(@Param("id") Long id, @Param("uid") Long uid);
 
-    List<FileInfo> getChildFiles(@Param("pid") Long pid,@Param("uid") Long uid);
+    List<FileInfo> getChildFiles(@Param("pid") Long pid,@Param("uid") Long uid, @Param("status") Integer status);
 
     int deleteBatch(@Param("ids") List<Long> ids, @Param("uid") Long uid);
 
@@ -41,12 +41,12 @@ public interface FileInfoMapper {
 
     int updateStatusBatch(@Param("uid") Long uid, @Param("ids") List<Long> ids, @Param("status") Integer status, @Param("updateTime") LocalDateTime updateTime);
 
-    @Select("SELECT * FROM file WHERE md5 = #{md5} AND uid = #{uid}")
-    FileInfo getFileByMd5(@Param("md5") String md5,@Param("uid") Long uid);
+    @Select("SELECT * FROM file WHERE md5 = #{md5}")
+    List<FileInfo> getFileByMd5(@Param("md5") String md5);
 
 
-    @Update("UPDATE file SET size = size + #{size} WHERE pid = #{pid} AND uid = #{uid}")
-    int updateParentSize(@Param("pid") Long uid, @Param("pid") Long pid, @Param("size") Long size);
+    @Update("UPDATE file SET size = size + #{size} WHERE id = #{id} AND uid = #{uid}")
+    int updateParentSize(@Param("uid") Long uid, @Param("id") Long id, @Param("size") Long size);
 
     List<FileInfo> selectOrder(@Param("uid") Long uid, @Param("pid") Long pid, @Param("type") Integer type, @Param("fileName") String fileName, @Param("order") Integer order);
 }

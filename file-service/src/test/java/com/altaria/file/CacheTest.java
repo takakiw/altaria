@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -60,6 +61,19 @@ public class CacheTest {
 
     @Test
     public void testCache1() {
-        fileInfoMapper.selectOrder(1L, null, 0, null, 1).forEach(System.out::println);
+        cacheService.deleteFile(1L, 1L);
+        cacheService.deleteFileBatch(1L, List.of(1L, 2L, 3L));
+        cacheService.deleteChildren(1L, 0L, 1L);
+        cacheService.deleteAllChildren(1L, 0L);
+        cacheService.deleteChildrenBatch(new ArrayList<>());
+
+        /*cacheService.updateFileParent(1L, 1L, 2L);
+        cacheService.updateFileName(1L, 1L, "test");
+        cacheService.updateFileSize(1L, 1L, 100L);*/
+
+
+        redisTemplate.opsForHash().delete("file:1:1", "filaaeName");
     }
+
+
 }

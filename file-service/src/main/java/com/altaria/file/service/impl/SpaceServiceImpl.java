@@ -33,14 +33,13 @@ public class SpaceServiceImpl implements SpaceService {
     }
 
     @Override
-    public Result updateSpace(Long uid, Long usedSpace, Integer fileCount) {
-        if (uid == null || usedSpace == null || fileCount == null){
+    public Result updateSpace(Long uid, Long usedSpace) {
+        if (uid == null || usedSpace == null){
             return Result.error();
         }
         Space dbSpace = new Space();
         dbSpace.setUid(uid);
         dbSpace.setUseSpace(usedSpace);
-        dbSpace.setFileCount(fileCount);
         int updateSpace = spaceMapper.updateSpace(dbSpace);
         if (updateSpace == 0){
             return Result.error();

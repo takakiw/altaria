@@ -31,4 +31,6 @@ public interface FileInfoService {
     Result removeFile(List<Long> ids, Long uid);
 
     Result upload(Long uid, Long pid, MultipartFile file, String md5, Integer index, Integer total);
+
+    Result restoreFile(List<Long> ids, Long uid);
 }

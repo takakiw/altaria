@@ -32,19 +32,29 @@
             <if test="cover != null">
                 cover = #{cover},
             </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime}
+            </if>
         </set>
         <where>
             id = #{id} and uid = #{uid}
         </where>
     </update>
     <update id="updateStatusBatch">
-        update file set status = #{status}, update_time = #{updateTime} where uid = #{uid} and id in
-        <foreach collection="ids" item="id" open="(" separator="," close=")">
-            #{id}
-        </foreach>
+        update file
+        set status = #{status},
+        update_time = #{updateTime}
+        where uid = #{uid}
+        <if test="ids != null and ids.size() > 0">
+            and id in
+            <foreach collection="ids" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
     </update>
+
     <delete id="deleteBatch">
-        delete from file where file.uid = #{uid} and file.id in
+        delete from file where uid = #{uid} and id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
@@ -84,7 +94,7 @@
         </if>
     </select>
     <select id="getChildFiles" resultType="com.altaria.common.pojos.file.entity.FileInfo">
-        select * from file where pid = #{pid} and status = 0 and uid = #{uid}
+        select * from file where pid = #{pid} and status = #{status} and uid = #{uid}
     </select>
 
     <select id="getFileByIds" resultType="com.altaria.common.pojos.file.entity.FileInfo">

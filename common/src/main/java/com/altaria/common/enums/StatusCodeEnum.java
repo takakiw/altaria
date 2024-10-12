@@ -30,7 +30,7 @@ public enum StatusCodeEnum {
     FILE_NOT_EXISTS(2016,"文件不存在"),
     VIDEO_NOT_EXISTS(2017,"视频不存在"),
     FILE_CANNOT_PREVIEW(2018, "文件无法预览"),
-    FILE_TRANSCODING(2019, "文件正在转码中"),
+    FILE_TRANSCODING(2019, "文件正在转码中, 请稍后再试"),
     GATEWAY_ERROR(2020, "网关错误"),
     DIRECTORY_NOT_EXISTS(2021,"目录不存在");
 
