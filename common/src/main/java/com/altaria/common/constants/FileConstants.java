@@ -10,4 +10,6 @@ public class FileConstants {
 
     public static final Integer STATUS_RECYCLE = 2;
     public static final Long ROOT_DIR_ID = 0L;
+    public static final Integer THUMBNAIL_WIDTH = 100;
+    public static final Integer IMAGE_WIDTH = 100;
 }

@@ -49,4 +49,7 @@ public interface FileInfoMapper {
     int updateParentSize(@Param("uid") Long uid, @Param("id") Long id, @Param("size") Long size);
 
     List<FileInfo> selectOrder(@Param("uid") Long uid, @Param("pid") Long pid, @Param("type") Integer type, @Param("fileName") String fileName, @Param("order") Integer order);
+
+
+    int updateURLAndCoverByMd5(@Param("url") String url, @Param("cover") String cover, @Param("md5") String md5);
 }

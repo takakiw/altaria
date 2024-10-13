@@ -1,8 +1,13 @@
 server:
   port: 8082
+
 spring:
   application:
     name: file-service
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
   config:
     import: nacos:file-service-space
   cloud:
@@ -35,7 +40,7 @@ seata:
       username: nacos
       password: nacos
       group: DEFAULT_GROUP
-      cluster: default
+#      cluster: default
   config:
     type: nacos
     nacos:
@@ -47,12 +52,12 @@ seata:
       data-id: seata-server.properties
   tx-service-group: default_tx_group
   service:
-    vgroup-mapping:
-      default_tx_group: default
-    vgroupMapping:
-      default_tx_group: default
+#    vgroup-mapping:
+#      default_tx_group: default
+#    vgroupMapping:
+#      default_tx_group: default
 
 
 temp:
   file:
-    path: "D:\\zhawu\\temp"
+    path: "D:\\zhawu\\temp\\"

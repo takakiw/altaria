@@ -20,16 +20,13 @@ public class SpaceServiceImpl implements SpaceService {
     private FileCacheService cacheService;
 
     @Override
-    public Result getUsedSpace(Long uid) {
-        if (uid == null){
-            return Result.error();
-        }
+    public Space getUsedSpace(Long uid) {
         Space space = cacheService.getSpace(uid);
         if (space == null){
             space = spaceMapper.getUsedSpace(uid);
             cacheService.saveSpace(space);
         }
-        return Result.success(space);
+        return space;
     }
 
     @Override

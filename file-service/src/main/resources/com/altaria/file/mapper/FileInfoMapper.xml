@@ -52,6 +52,18 @@
             </foreach>
         </if>
     </update>
+    <update id="updateURLAndCoverByMd5">
+        update file
+        <set>
+            <if test="url != null and url != ''">
+                url = #{url},
+            </if>
+            <if test="cover != null and cover != ''">
+                cover = #{cover}
+            </if>
+        </set>
+        where md5 = #{md5}
+    </update>
 
     <delete id="deleteBatch">
         delete from file where uid = #{uid} and id in

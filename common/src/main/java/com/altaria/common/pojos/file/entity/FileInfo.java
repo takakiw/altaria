@@ -1,10 +1,7 @@
 package com.altaria.common.pojos.file.entity;
 
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -12,6 +9,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @ToString
+@AllArgsConstructor
+@NoArgsConstructor
 public class FileInfo implements Serializable{
     private Long id; //主键ID
     private Long uid; // 用户ID

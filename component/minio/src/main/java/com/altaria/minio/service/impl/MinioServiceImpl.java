@@ -48,10 +48,19 @@ public class MinioServiceImpl implements MinioService {
                             .build()
             );
             log.info("成功上传文件 {} 到 {}", fileName, minioProperties.getBucketName());
+            inputStream.close();
             return;
         } catch (Exception e) {
             log.error("minio文件上传失败", e);
             return;
+        }finally {
+            if (inputStream != null){
+                try {
+                    inputStream.close();
+                } catch (Exception e) {
+                    log.error("minio文件流关闭失败", e);
+                }
+            }
         }
     }
 

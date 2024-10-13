@@ -75,5 +75,12 @@ public class CacheTest {
         redisTemplate.opsForHash().delete("file:1:1", "filaaeName");
     }
 
+    @Test
+    public void testCache2() {
+        long fid = 132312414L;
+        cacheService.updateUploadFileSize(1L, fid, 13713L);
+        System.out.println(cacheService.getUploadFileSize(1L, fid));
+    }
+
 
 }

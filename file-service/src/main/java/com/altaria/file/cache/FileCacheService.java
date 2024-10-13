@@ -24,15 +24,23 @@ import java.util.stream.Collectors;
 public class FileCacheService {
 
 
-    private static final Long FILE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 3 days
-
+    private static final Long FILE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2 days
+    private static final long FILE_NULL_EXPIRATION_TIME = 60 * 5L; // 5分钟
     private static final String FILE_PREFIX = "file:"; // hset file:uid:fid values
     private static final String FILE_PARENT_UPDATE_PREFIX = "parent:update"; // zset
     private static final String FILE_PARENT_NAME_PREFIX = "parent:name"; // zset
     private static final String FILE_PARENT_SIZE_PREFIX = "parent:size"; // zset
+
+
+    private static final long SPACE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2 days
     private static final String SPACE_PREFIX = "space:";
-    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24L; // 1天
-    private static final long FILE_NULL_EXPIRATION_TIME = 60 * 5L; // 5分钟
+
+    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24 * 1L; // 2天
+    private static final String FILE_UPLOAD_PREFIX = "upload:"; // hset upload:uid:fid values
+
+
+
+
 
 
     @Autowired
@@ -240,7 +248,7 @@ public class FileCacheService {
     }
 
     public void saveSpace(Space space) {
-        redisTemplate.opsForValue().set(SPACE_PREFIX + space.getUid(), space, FILE_UPLOAD_EXPIRATION_TIME, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(SPACE_PREFIX + space.getUid(), space, SPACE_EXPIRATION_TIME, TimeUnit.SECONDS);
     }
 
     public Space getSpace(Long uid) {
@@ -262,5 +270,22 @@ public class FileCacheService {
         redisTemplate.delete(FILE_PARENT_UPDATE_PREFIX + uid + ":" + id);
         redisTemplate.delete(FILE_PARENT_NAME_PREFIX + uid + ":" + id);
         redisTemplate.delete(FILE_PARENT_SIZE_PREFIX + uid + ":" + id);
+    }
+
+    public void updateUploadFileSize(Long uid, Long fid, long size) {
+        redisTemplate.opsForValue().increment(FILE_UPLOAD_PREFIX + uid + ":" + fid, size);
+        redisTemplate.expire(FILE_UPLOAD_PREFIX + uid + ":" + fid, FILE_UPLOAD_EXPIRATION_TIME, TimeUnit.SECONDS);
+    }
+
+    public long getUploadFileSize(Long uid, Long fid) {
+        Object o = redisTemplate.opsForValue().get(FILE_UPLOAD_PREFIX + uid + ":" + fid);
+        if (o == null){
+            return 0;
+        }
+        return Long.parseLong(o.toString());
+    }
+
+    public void deleteUploadFile(Long uid, Long fid) {
+        redisTemplate.delete(FILE_UPLOAD_PREFIX + uid + ":" + fid);
     }
 }

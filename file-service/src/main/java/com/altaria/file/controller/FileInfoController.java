@@ -24,6 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/file")
 @Validated
+@CrossOrigin
 public class FileInfoController {
 
     @Autowired
@@ -42,12 +43,13 @@ public class FileInfoController {
      */
     @PostMapping("/file/upload")
     public Result upload(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
+                         @NotNull Long fid,
                          @NotNull Long pid,
                          @NotNull MultipartFile file,
                          @NotNull String md5,
                          @NotNull Integer index,
                          @NotNull Integer total) {
-        return fileInfoService.upload(uid, pid, file, md5, index, total);
+        return fileInfoService.upload(uid,fid, pid, file, md5, index, total);
     }
 
     /**
@@ -66,7 +68,7 @@ public class FileInfoController {
      * @param fileInfo
      * @return
      */
-    @PutMapping("file/mvfile")
+    @PutMapping("/file/mvfile")
     public Result moveFile(@RequestBody FileInfo fileInfo,
                            @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
        return fileInfoService.moveFile(fileInfo, uid);
@@ -88,13 +90,12 @@ public class FileInfoController {
      * 获取文件列表
      * @param id
      * @param type
-     * @param status
-     * @param page
-     * @param count
+     * @param fileName
+     * @param order
      * @param uid
-     * @return
+     * @return PageResult<FileInfo>
      */
-    @GetMapping("/file/{id}")
+    @GetMapping("/list/{id}")
     public Result<PageResult<FileInfo>> get(@PathVariable("id") Long id,
                                             @RequestParam(value = "type", required = false) Integer type,
                                             @RequestParam(value = "fileName" , required = false) String fileName,
@@ -107,7 +108,7 @@ public class FileInfoController {
      * 获取文件路径
      * @param path
      * @param uid
-     * @return
+     * @return Result
      */
     @GetMapping("/file/path")
     public Result getPath(@RequestParam(value = "path", required = true) Long path,
@@ -121,7 +122,7 @@ public class FileInfoController {
      * @param id
      * @param uid
      */
-    @GetMapping("/file/preview/{id}")
+    @GetMapping("/preview/{id}")
     public void preview(HttpServletResponse response,
                         @PathVariable("id") Long id,
                         @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
@@ -135,7 +136,7 @@ public class FileInfoController {
      * @param id
      * @param uid
      */
-    @GetMapping("/file/video/{id}")
+    @GetMapping("/video/{id}")
     public void video(HttpServletResponse response,
                       HttpServletRequest request,
                       @PathVariable("id") Long id,
@@ -149,35 +150,38 @@ public class FileInfoController {
      * @param id
      * @param uid
      */
-    @GetMapping("/file/download/{id}")
+    @GetMapping("/download/{id}")
     public void download(HttpServletResponse response,
                         @PathVariable("id") Long id,
                         @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         fileInfoService.download(response, id, uid);
     }
 
-    @DeleteMapping("/file/{ids}")
+    @DeleteMapping("/del/{ids}")
     public Result delete(@PathVariable("ids") List<Long> ids,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileInfoService.deleteFile(ids, uid);
     }
 
-    @DeleteMapping("/file/remove/{ids}")
+    @DeleteMapping("/remove/{ids}")
     public Result remove(@PathVariable("ids") List<Long> ids,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileInfoService.removeFile(ids, uid);
     }
 
-    @PutMapping("/file/restore/{ids}")
+    @PutMapping("/restore/{ids}")
     public Result restore(@PathVariable("ids") List<Long> ids,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileInfoService.restoreFile(ids, uid);
     }
 
 
-    @GetMapping("/space/space")
+    @GetMapping("/space/info")
     public Result<SpaceVO> space(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
-        return spaceService.getUsedSpace(uid);
+        if (uid == null){
+            return Result.error();
+        }
+        return Result.success(BeanUtil.copyProperties(spaceService.getUsedSpace(uid), SpaceVO.class));
     }
 
     @PutMapping("/space/update")
