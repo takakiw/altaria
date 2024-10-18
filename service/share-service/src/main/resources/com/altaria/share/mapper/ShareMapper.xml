@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.altaria.share.mapper.ShareMapper">
+
+    <resultMap id="shareResultMap" type="com.altaria.common.pojos.share.entity.Share">
+        <id property="id" column="id" />
+        <result property="uid" column="uid" />
+        <result property="fids" column="fids" typeHandler="com.altaria.share.handler.LongListTypeHandler" />
+        <result property="expire" column="expire" />
+        <result property="url" column="url" />
+        <result property="sign" column="sign" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+
+    <insert id="insert">
+        INSERT INTO share (id, uid, fids, expire, url, sign)
+        values (#{id}, #{uid}, #{fids,typeHandler=com.altaria.share.handler.LongListTypeHandler}, #{expire}, #{url}, #{sign})
+    </insert>
+
+    <select id="select" resultType="com.altaria.common.pojos.share.entity.Share" resultMap="shareResultMap">
+        SELECT * from share
+        <where>
+            <if test="id!= null">
+                id = #{id}
+            </if>
+            <if test="uid!= null">
+                AND uid = #{uid}
+            </if>
+            <if test="sign!= null">
+                AND sign = #{sign}
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+</mapper>

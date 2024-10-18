@@ -9,7 +9,6 @@ import java.util.List;
 public class Share {
     private Long id;
     private Long uid;
-    private Integer type;
     private List<Long> fids;
     private LocalDateTime expire;
     private String sign;
