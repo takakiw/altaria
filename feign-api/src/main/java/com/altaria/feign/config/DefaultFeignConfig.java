@@ -1,10 +1,9 @@
 package com.altaria.feign.config;
 
-import com.altaria.feign.fallback.UserServiceClientFallbackFactory;
+import com.altaria.feign.fallback.FileServiceClientFallbackFactory;
 import feign.Logger;
+import feign.RequestInterceptor;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 
 public class DefaultFeignConfig {
 
@@ -14,7 +13,14 @@ public class DefaultFeignConfig {
     }
 
     @Bean
-    public UserServiceClientFallbackFactory userServiceClientFallbackFactory() {
-        return new UserServiceClientFallbackFactory();
+    public FileServiceClientFallbackFactory userServiceClientFallbackFactory() {
+        return new FileServiceClientFallbackFactory();
+    }
+
+    @Bean
+    public RequestInterceptor requestInterceptor() {
+        return template -> {
+            template.header("request-path-service", "feign-api");
+        };
     }
 }

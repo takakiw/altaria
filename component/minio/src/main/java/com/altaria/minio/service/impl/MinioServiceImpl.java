@@ -51,14 +51,42 @@ public class MinioServiceImpl implements MinioService {
             inputStream.close();
             return;
         } catch (Exception e) {
-            log.error("minio文件上传失败", e);
+            log.error("minio文件上传失败{}", fileName);
             return;
         }finally {
             if (inputStream != null){
                 try {
                     inputStream.close();
                 } catch (Exception e) {
-                    log.error("minio文件流关闭失败", e);
+                    log.error("minio文件流关闭失败");
+                }
+            }
+        }
+    }
+
+    @Override
+    public void upLoadFile(String fileName, InputStream inputStream, String contentType, String bucketName) {
+        try {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .contentType(contentType)
+                            .object(fileName)
+                            .stream(inputStream, inputStream.available(), -1)
+                            .build()
+            );
+            log.info("成功上传文件 {} 到 {}", fileName, bucketName);
+            inputStream.close();
+            return;
+        } catch (Exception e) {
+            log.error("minio文件上传失败{}", fileName, e);
+            return;
+        }finally {
+            if (inputStream != null){
+                try {
+                    inputStream.close();
+                } catch (Exception e) {
+                    log.error("minio文件流关闭失败");
                 }
             }
         }
@@ -73,10 +101,24 @@ public class MinioServiceImpl implements MinioService {
                             .object(fileName)
                             .build()
             );
-            System.out.println(minioProperties);
             log.info("成功删除文件 {}", fileName);
         } catch (Exception e) {
-            log.error("minio文件删除失败", e);
+            log.error("minio文件删除失败{}", fileName);
+        }
+    }
+
+    @Override
+    public void deleteFile(String fileName, String bucketName) {
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(fileName)
+                            .build()
+            );
+            log.info("成功删除文件 {}", fileName);
+        } catch (Exception e) {
+            log.error("minio文件删除失败{}", fileName);
         }
     }
 
@@ -101,10 +143,10 @@ public class MinioServiceImpl implements MinioService {
         try {
             for (Result<DeleteError> result : results) {
                 DeleteError error = result.get();
-                log.error("minio批量删除文件失败：" + error.objectName() + "; " + error.message());
+                log.warn("minio批量删除文件失败：" + error.objectName() + "; " + error.message());
             }
         } catch (Exception e) {
-            log.error("minio文件批量删除失败", e);
+            log.warn("minio文件批量删除失败{}",fileNames);
         }
     }
 
@@ -119,12 +161,11 @@ public class MinioServiceImpl implements MinioService {
                             .build());
         } catch (Exception e) {
             log.error("minio文件{}元数据获取失败", fileName);
-            writerResponse(response, 404, "文件不存在！");
+            writerResponse(response, 404, null);
             return;
         }
         if (statObject == null){
-            log.warn("文件不存在！");
-            writerResponse(response, 404, "文件不存在！");
+            writerResponse(response, 404, null);
             return;
         }
         // 设置响应头
@@ -141,7 +182,6 @@ public class MinioServiceImpl implements MinioService {
             )) {
             object.transferTo(response.getOutputStream());
         }catch (Exception e){
-            log.warn("文件不存在！");
             writerResponse(response, 404, "文件不存在！");
             return;
         }
@@ -208,7 +248,7 @@ public class MinioServiceImpl implements MinioService {
                             .build());
         } catch (Exception e) {
             log.error("minio文件{}元数据获取失败", fileName);
-            writerResponse(response, 404, "文件不存在！");
+            writerResponse(response, 404, null);
             return;
         }
         long fileSize = statObject.size();
@@ -262,7 +302,6 @@ public class MinioServiceImpl implements MinioService {
             }
             response.getWriter().write(s);
         } catch (Exception e) {
-            log.error("响应写入失败", e);
         }
     }
 }

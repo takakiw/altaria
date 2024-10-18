@@ -37,7 +37,9 @@ public enum StatusCodeEnum {
     FILE_CANNOT_PREVIEW(2018, "文件无法预览"),
     FILE_TRANSCODING(2019, "文件正在转码中, 请稍后再试"),
     GATEWAY_ERROR(2020, "网关错误"),
-    DIRECTORY_NOT_EXISTS(2021,"目录不存在");
+    DIRECTORY_NOT_EXISTS(2021,"目录不存在"),
+    CREATE_SHARE_LINK_ERROR(2022, "创建分享链接失败, 请稍后再试"),
+    SHARE_NOT_FOUND(2023, "分享不存在");
 
 
     int code;

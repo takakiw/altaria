@@ -5,6 +5,7 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/service/store-service/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
@@ -12,6 +13,7 @@
         <option value="$PROJECT_DIR$/ai-service/pom.xml" />
         <option value="$PROJECT_DIR$/component/exception/pom.xml" />
         <option value="$PROJECT_DIR$/model/pom.xml" />
+        <option value="$PROJECT_DIR$/share-service/pom.xml" />
       </set>
     </option>
   </component>

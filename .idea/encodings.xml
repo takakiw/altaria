@@ -3,8 +3,6 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/ai-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ai-service/src/main/resources" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/chat-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/chat-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/common/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/common/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/exception/src/main/java" charset="UTF-8" />
@@ -13,24 +11,38 @@
     <file url="file://$PROJECT_DIR$/component/global-config/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/minio/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/minio/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/component/rabbitmq/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/component/rabbitmq/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/redis/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/redis/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/component/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/feign-api/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/feign-api/src/main/resources" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/file-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/file-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/gateway/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/gateway/src/main/resources" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/groups-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/groups-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/model/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/model/src/main/resources" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/note-service/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/note-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/chat-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/chat-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/file-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/file-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/groups-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/groups-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/note-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/note-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/share-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/share-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/storage-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/storage-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/user-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/user-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/store-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/store-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/user-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/user-service/src/main/resources" charset="UTF-8" />
   </component>

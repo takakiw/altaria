@@ -1,2 +1,3 @@
 com.altaria.config.config.WebMVCConfig
 com.altaria.config.exception.handle.GlobalException
+com.altaria.config.filer.AllRequestFilter

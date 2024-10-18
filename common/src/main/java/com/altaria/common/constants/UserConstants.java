@@ -29,4 +29,6 @@ public class UserConstants {
     public static final String TYPE_UPDATE_PWD = "updatePwd";
     public static final String EMAIL_UPDATE_PWD_TEXT = "您正在修改Altaria云平台密码，您的验证码是：<h1 style='color:blue;'>%s</h1>，请在2分钟内输入。如非本人操作，请忽略本邮件。";
     public static final String EMAIL_UPDATE_PWD_SUBJECT = "修改密码验证码";
+    public static final String STORAGE_TYPE = "avatar";
+    public static final long MAX_AVATAR_SIZE = 1024 * 1024 * 2; // 2MB
 }

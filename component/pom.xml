@@ -15,6 +15,7 @@
         <module>redis</module>
         <module>global-config</module>
         <module>minio</module>
+        <module>rabbitmq</module>
     </modules>
 
     <properties>

@@ -14,12 +14,15 @@ public interface MinioService {
 
 
     void upLoadFile(String fileName, InputStream inputStream, String contentType);
+    void upLoadFile(String fileName, InputStream inputStream, String contentType, String bucketName);
 
 
     @Async
     void deleteFile(String fileName);
 
     @Async
+    void deleteFile(String fileName, String bucketName);
+
     void deleteFile(List<String> fileNames);
 
     void downloadFile(String fileName, HttpServletResponse response);

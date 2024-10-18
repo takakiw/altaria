@@ -22,6 +22,7 @@ public class FileInfo implements Serializable{
     private Long pid; // 父级目录ID
     private Integer status; // 状态，0正常，1删除
     private String cover; // 封面图片路径
+    private Integer transformed; // 转码状态，0转码完成，1转码中，2转码失败
     private LocalDateTime createTime; // 创建时间
     private LocalDateTime updateTime; // 更新时间
 }
