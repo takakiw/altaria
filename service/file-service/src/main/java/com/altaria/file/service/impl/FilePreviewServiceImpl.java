@@ -60,8 +60,6 @@ public class FilePreviewServiceImpl implements FilePreviewService {
             writerResponse(response, StatusCodeEnum.FILE_TRANSCODING);
             return;
         }
-        // 通过storageService的preview方法预览文件： 流程：1.获取文件url 2.通过storageClient的preview方法预览文件 3.设置响应头 4.连接minio 5.读取文件流并输出 6.关闭流
-        //storageClient.preview(file.getUrl(), response);
     }
 
     @Override
@@ -97,7 +95,6 @@ public class FilePreviewServiceImpl implements FilePreviewService {
         if (id == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
         }
-        uid = uid == null ? 1L : uid;
         FileInfo file = cacheService.getFile(uid, id);
         if (file == null){
             file = fileInfoMapper.getFileById(id, uid);

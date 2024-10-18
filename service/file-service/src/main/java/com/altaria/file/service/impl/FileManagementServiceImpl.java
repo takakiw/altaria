@@ -447,11 +447,10 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     @Override
     public void download(HttpServletResponse response, Long id, Long uid) {
-        /*if (id == null || uid == null) {
+        if (id == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
             return;
-        }*/
-        uid = uid == null ? 1L : uid;
+        }
         FileInfo file = cacheService.getFile(uid, id);
         if (file == null){
             file = fileInfoMapper.getFileById(id, uid);
