@@ -7,8 +7,10 @@ import com.altaria.common.pojos.space.vo.SpaceVO;
 import com.altaria.space.cache.SpaceCacheService;
 import com.altaria.space.mapper.SpaceMapper;
 import com.altaria.space.service.SpaceManagementService;
+import io.seata.spring.annotation.GlobalTransactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SpaceManagementServiceImpl implements SpaceManagementService {
@@ -37,6 +39,7 @@ public class SpaceManagementServiceImpl implements SpaceManagementService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result updateSpace(Long uid, Long usedSpace) {
         if (uid == null || usedSpace == null){
             return Result.error();
@@ -45,9 +48,27 @@ public class SpaceManagementServiceImpl implements SpaceManagementService {
         dbSpace.setUid(uid);
         dbSpace.setUseSpace(usedSpace);
         int updateSpace = spaceMapper.updateSpace(dbSpace);
+
         if (updateSpace == 0){
-            throw new RuntimeException("更新空间失败");
+            return Result.error("更新空间失败");
         }
+        cacheService.deleteSpace(uid);
+        return Result.success();
+    }
+
+    @Override
+    public Result updateNote(Long uid, Integer noteCount) {
+        if (uid == null || noteCount == null){
+            return Result.success();
+        }
+        Space dbSpace = new Space();
+        dbSpace.setUid(uid);
+        dbSpace.setNoteCount(noteCount);
+        int updateNote = spaceMapper.updateSpace(dbSpace);
+        if (updateNote == 0){
+            return Result.error("更新笔记数失败");
+        }
+        cacheService.deleteSpace(uid);
         return Result.success();
     }
 

@@ -33,4 +33,6 @@ public interface FileManagementService {
     Result<PageResult<FileInfo>> getRecycleFileList(Long uid);
 
     String uploadImage(MultipartFile file);
+
+    String test();
 }

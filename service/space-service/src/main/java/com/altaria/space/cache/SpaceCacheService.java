@@ -26,4 +26,7 @@ public class SpaceCacheService {
         return (Space) redisTemplate.opsForValue().get(SPACE_PREFIX + uid);
     }
 
+    public void deleteSpace(Long uid) {
+        redisTemplate.delete(SPACE_PREFIX + uid);
+    }
 }

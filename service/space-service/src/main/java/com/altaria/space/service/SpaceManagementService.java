@@ -11,4 +11,5 @@ public interface SpaceManagementService {
 
     Result createSpace(Long uid, Space space);
 
+    Result updateNote(Long uid, Integer noteCount);
 }

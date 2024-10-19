@@ -10,6 +10,9 @@
             <if test="totalSpace != null">
                 total_space = total_space + #{totalSpace},
             </if>
+            <if test="noteCount != null">
+                note_count = note_count + #{noteCount},
+            </if>
         </set>
         where uid = #{uid}
     </update>

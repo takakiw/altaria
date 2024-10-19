@@ -86,6 +86,24 @@ public class FileManagementServiceImpl implements FileManagementService {
         return fileName;
     }
 
+    @Override
+    @GlobalTransactional
+    @Transactional
+    public String test() {
+        FileInfo fileInfo = new FileInfo();
+        fileInfo.setId(IdUtil.getSnowflake().nextId());
+        fileInfo.setFileName("test.txt");
+        fileInfo.setPid(0L);
+        fileInfo.setUid(1L);
+        fileInfo.setType(FileType.IMAGE.getType());
+        fileInfo.setStatus(FileConstants.STATUS_USE);
+        fileInfo.setSize(0L);
+        fileInfo.setMd5("afqefqf3");
+        spaceServiceClient.updateSpace(1L, new Space(1L, 10000L));
+        if(1 > 0)throw new RuntimeException("a");
+        fileInfoMapper.insert(fileInfo);
+        return "test";
+    }
 
 
     @Override
@@ -627,7 +645,8 @@ public class FileManagementServiceImpl implements FileManagementService {
         return Result.success();
     }
 
-    @GlobalTransactional(rollbackFor = Exception.class)
+    @GlobalTransactional
+    @Transactional
     @Override
     public Result upload(Long uid, Long fid, Long pid, MultipartFile file, String md5, Integer index, Integer total) {
         long size = file.getSize();
@@ -662,7 +681,9 @@ public class FileManagementServiceImpl implements FileManagementService {
             List<FileInfo> fileByMd5s = fileInfoMapper.getFileByMd5(md5);
             if (fileByMd5s != null && !fileByMd5s.isEmpty()) {
                 FileInfo fileByMd5 = fileByMd5s.get(0);
+                long start = System.currentTimeMillis();
                 SpaceVO space = spaceServiceClient.space(uid).getData();
+                System.out.println("秒传：" + (System.currentTimeMillis() - start) + space);
                 if (fileByMd5.getSize() + space.getUseSpace() > space.getTotalSpace()) {
                     log.error("秒传失败，空间不足");
                     return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
@@ -686,7 +707,9 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
 
         // 0 ~ n - 1分片处理
+        long l = System.currentTimeMillis();
         SpaceVO usedSpace = spaceServiceClient.space(uid).getData();
+        System.out.println("正常传输：" + (System.currentTimeMillis() - l) + usedSpace);
         cacheService.updateUploadFileSize(uid, fid, size);
         long uploadFileSize = cacheService.getUploadFileSize(uid, fid);
         try {
@@ -734,7 +757,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     }
 
 
-    private void saveFile(FileInfo saveFile) throws Exception {
+    private void saveFile(FileInfo saveFile){
         RLock lock = redissonClient.getLock("fileInfoLock" + saveFile.getUid() + ":" + saveFile.getPid() + ":" + saveFile.getFileName());
         boolean b = false;
         try {
@@ -766,8 +789,12 @@ public class FileManagementServiceImpl implements FileManagementService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }finally {
-            if (b){
-                lock.unlock();
+            try {
+                if (b && lock.isLocked()){
+                    lock.unlock();
+                }
+            }catch (Exception e){
+             log.warn("释放锁失败");
             }
         }
     }

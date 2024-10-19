@@ -31,33 +31,38 @@ spring:
         connection-timeout: 3000 # 连接超时时间
         ok-http:
           read-timeout: 3000 # 读超时时间
+
+
 seata:
-  registry:
+  registry: # TC服务注册中心的配置，微服务根据这些信息去注册中心获取tc服务地址
+    # 参考tc服务自己的registry.conf中的配置
     type: nacos
-    nacos:
+    nacos: # tc
       server-addr: 192.168.96.132:8848
-      application: seata-server
+      group: DEFAULT_GROUP
+      application: seata-server # tc服务在nacos中的服务名称
+      cluster: default # 集群名称
       username: nacos
       password: nacos
-      group: DEFAULT_GROUP
-#      cluster: default
   config:
     type: nacos
     nacos:
       server-addr: 192.168.96.132:8848
       username: nacos
       password: nacos
-      group: SEATA_GROUP
-      namespace:
+      group: DEFAULT_GROUP
       data-id: seata-server.properties
   tx-service-group: default_tx_group
   service:
-#    vgroup-mapping:
-#      default_tx_group: default
-#    vgroupMapping:
-#      default_tx_group: default
+    vgroup-mapping:
+      default_tx_group: default
+    vgroupMapping:
+      default_tx_group: default
+  data-source-proxy-mode: AT
 
 
 temp:
   file:
     path: "D:\\zhawu\\temp\\"
+
+

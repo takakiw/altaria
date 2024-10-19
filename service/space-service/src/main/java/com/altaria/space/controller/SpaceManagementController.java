@@ -42,4 +42,16 @@ public class SpaceManagementController {
                               @RequestBody Space space) {
         return spaceManagementService.updateSpace(uid, space.getUseSpace());
     }
+
+    /**
+     * 修改空间的笔记信息（数量）
+     * @param uid
+     * @param space
+     * @return
+     */
+    @PutMapping("/updateNote")
+    public Result updateNote(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
+                              @RequestBody Space space) {
+        return spaceManagementService.updateNote(uid, space.getNoteCount());
+    }
 }

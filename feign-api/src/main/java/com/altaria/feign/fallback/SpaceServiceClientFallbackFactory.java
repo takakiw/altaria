@@ -16,7 +16,7 @@ public class SpaceServiceClientFallbackFactory implements FallbackFactory<SpaceS
                 SpaceVO spaceVO = new SpaceVO();
                 spaceVO.setUid(uid);
                 spaceVO.setUseSpace(0L);
-                spaceVO.setTotalSpace(0L);
+                spaceVO.setTotalSpace(1024 * 1024 * 1024 * 1024L);
                 return Result.success();
             }
 

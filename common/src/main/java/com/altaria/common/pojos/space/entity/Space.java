@@ -12,7 +12,7 @@ public class Space implements Serializable {
     private Long uid;
     private Long useSpace;
     private Long totalSpace;
-
+    private Integer noteCount;
     public Space() {
 
     }
