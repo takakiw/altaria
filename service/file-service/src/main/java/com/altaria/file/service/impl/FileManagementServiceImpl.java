@@ -12,12 +12,14 @@ import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.file.mq.UploadMQType;
+import com.altaria.common.pojos.space.vo.SpaceVO;
+import com.altaria.feign.client.SpaceServiceClient;
 import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.file.service.FileManagementService;
-import com.altaria.file.service.SpaceManagementService;
 import com.altaria.minio.service.MinioService;
 import com.github.pagehelper.Page;
+import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -61,10 +63,8 @@ public class FileManagementServiceImpl implements FileManagementService {
     private RedissonClient redissonClient;
 
     @Autowired
-    private SpaceManagementService spaceManagementService;
+    private SpaceServiceClient spaceServiceClient;
 
-    @Autowired
-    private DataSourceTransactionManager dataSourceTransactionManager;
 
     @Value("${temp.file.path:/temp/file/}")
     private String tempPath;
@@ -622,11 +622,12 @@ public class FileManagementServiceImpl implements FileManagementService {
                 System.out.println("删除封面：" + cover + "_.jpg");
             }
         }
+        spaceServiceClient.updateSpace(uid, new Space(uid, -size));
         rabbitTemplate.convertAndSend("delete-queue", StringUtils.join(delUrls, ","));
-        spaceManagementService.updateSpace(uid, -size);
         return Result.success();
     }
 
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Override
     public Result upload(Long uid, Long fid, Long pid, MultipartFile file, String md5, Integer index, Integer total) {
         long size = file.getSize();
@@ -657,13 +658,11 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
         }
         File tempDir = null;
-        DefaultTransactionDefinition td = new DefaultTransactionDefinition();
-        TransactionStatus status = dataSourceTransactionManager.getTransaction(td);
         if (index == 0) {
             List<FileInfo> fileByMd5s = fileInfoMapper.getFileByMd5(md5);
             if (fileByMd5s != null && !fileByMd5s.isEmpty()) {
                 FileInfo fileByMd5 = fileByMd5s.get(0);
-                Space space = spaceManagementService.getUsedSpace(uid);
+                SpaceVO space = spaceServiceClient.space(uid).getData();
                 if (fileByMd5.getSize() + space.getUseSpace() > space.getTotalSpace()) {
                     log.error("秒传失败，空间不足");
                     return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
@@ -677,20 +676,17 @@ public class FileManagementServiceImpl implements FileManagementService {
                 fileByMd5.setCreateTime(LocalDateTime.now());
                 try {
                     saveFile(fileByMd5);
-                    dataSourceTransactionManager.commit(status);
-                    cacheService.deleteUploadFile(uid, fid);
-                    log.info("秒传");
-                    return Result.success(100);
                 } catch (Exception e) {
-                    log.error("秒传失败");
-                    dataSourceTransactionManager.rollback(status);
-                    return Result.error(StatusCodeEnum.FILE_UPLOAD_FAILED);
+                    throw new RuntimeException(e);
                 }
+                cacheService.deleteUploadFile(uid, fid);
+                log.info("秒传");
+                return Result.success(100);
             }
         }
 
         // 0 ~ n - 1分片处理
-        Space usedSpace = spaceManagementService.getUsedSpace(uid);
+        SpaceVO usedSpace = spaceServiceClient.space(uid).getData();
         cacheService.updateUploadFileSize(uid, fid, size);
         long uploadFileSize = cacheService.getUploadFileSize(uid, fid);
         try {
@@ -719,7 +715,6 @@ public class FileManagementServiceImpl implements FileManagementService {
                 dbFile.setCreateTime(LocalDateTime.now());
                 dbFile.setSize(uploadFileSize);
                 saveFile(dbFile);
-                dataSourceTransactionManager.commit(status);
                 cacheService.deleteUploadFile(uid, fid);
                 String suffix = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
                 String contentType = file.getContentType();
@@ -727,16 +722,14 @@ public class FileManagementServiceImpl implements FileManagementService {
                 rabbitTemplate.convertAndSend("upload-queue",new UploadMQType(uid, dbId, fid, contentType, suffix, tempPath, md5));
                 return Result.success(200);
             }
-            dataSourceTransactionManager.commit(status);
             return Result.success(200);
         }catch (Exception e){
-            dataSourceTransactionManager.rollback(status);
             if (tempDir != null){
                 FileUtils.deleteQuietly(tempDir);
             }
             cacheService.deleteUploadFile(uid, fid);
             log.error("文件上传失败");
-            return Result.error(StatusCodeEnum.FILE_UPLOAD_FAILED);
+            throw new RuntimeException("文件上传失败"); // 抛出异常，确保事务回滚
         }
     }
 
@@ -766,7 +759,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                 pathAddSize(saveFile.getUid(), saveFile.getPid(), saveFile.getSize());
                 cacheService.addChildren(saveFile.getUid(), saveFile.getPid(), saveFile);
                 cacheService.saveFile(saveFile);
-                spaceManagementService.updateSpace(saveFile.getUid(), saveFile.getSize());
+                spaceServiceClient.updateSpace(saveFile.getUid(), new Space(saveFile.getUid(), saveFile.getSize()));
                 return;
             }
             throw new Exception("文件保存失败");

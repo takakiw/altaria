@@ -1,4 +1,4 @@
-package com.altaria.file.service;
+package com.altaria.space.service;
 
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.space.entity.Space;

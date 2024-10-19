@@ -31,8 +31,6 @@ public class FileCacheService {
     private static final String FILE_PARENT_SIZE_PREFIX = "parent:size"; // zset
 
 
-    private static final long SPACE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2 days
-    private static final String SPACE_PREFIX = "space:";
 
     private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24 * 1L; // 2天
     private static final String FILE_UPLOAD_PREFIX = "upload:"; // hset upload:uid:fid values
@@ -245,13 +243,6 @@ public class FileCacheService {
         return rank != null && rank >= 0;
     }
 
-    public void saveSpace(Space space) {
-        redisTemplate.opsForValue().set(SPACE_PREFIX + space.getUid(), space, SPACE_EXPIRATION_TIME, TimeUnit.SECONDS);
-    }
-
-    public Space getSpace(Long uid) {
-        return (Space) redisTemplate.opsForValue().get(SPACE_PREFIX + uid);
-    }
 
 
     public boolean ParentKeyCodeExists(Long uid, Long pid) {

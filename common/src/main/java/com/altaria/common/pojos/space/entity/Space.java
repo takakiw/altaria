@@ -12,15 +12,13 @@ public class Space implements Serializable {
     private Long uid;
     private Long useSpace;
     private Long totalSpace;
-    private Integer fileCount;
 
     public Space() {
 
     }
 
-    public Space(Long uid, Long useSpace, Integer fileCount) {
+    public Space(Long uid, Long useSpace) {
         this.uid = uid;
         this.useSpace = useSpace;
-        this.fileCount = fileCount;
     }
 }

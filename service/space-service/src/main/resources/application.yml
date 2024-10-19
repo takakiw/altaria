@@ -1,0 +1,20 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: space-service
+  config:
+    import: nacos:space-service-space
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.96.132:8848
+        username: nacos
+        password: nacos
+      config:
+        server-addr: 192.168.96.132:8848
+        file-extension: yaml
+        username: nacos
+        password: nacos
+      server-addr: 192.168.96.132:8848

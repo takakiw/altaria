@@ -1,4 +1,4 @@
-package com.altaria.file.mapper;
+package com.altaria.space.mapper;
 
 
 import com.altaria.common.pojos.space.entity.Space;

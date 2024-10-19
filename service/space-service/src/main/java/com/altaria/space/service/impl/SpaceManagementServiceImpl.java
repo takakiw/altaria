@@ -1,12 +1,12 @@
-package com.altaria.file.service.impl;
+package com.altaria.space.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.space.vo.SpaceVO;
-import com.altaria.file.cache.FileCacheService;
-import com.altaria.file.mapper.SpaceMapper;
-import com.altaria.file.service.SpaceManagementService;
+import com.altaria.space.cache.SpaceCacheService;
+import com.altaria.space.mapper.SpaceMapper;
+import com.altaria.space.service.SpaceManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +17,7 @@ public class SpaceManagementServiceImpl implements SpaceManagementService {
     private SpaceMapper spaceMapper;
 
     @Autowired
-    private FileCacheService cacheService;
+    private SpaceCacheService cacheService;
 
     @Override
     public Space getUsedSpace(Long uid) {

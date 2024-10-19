@@ -24,6 +24,7 @@
         <module>chat-service</module>
         <module>groups-service</module>
         <module>share-service</module>
+        <module>space-service</module>
     </modules>
 
 </project>

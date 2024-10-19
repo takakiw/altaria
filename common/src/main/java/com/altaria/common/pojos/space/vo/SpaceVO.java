@@ -11,5 +11,4 @@ public class SpaceVO implements Serializable {
     private Long uid;
     private Long useSpace;
     private Long totalSpace;
-    private Integer fileCount;
 }
