@@ -1,7 +1,7 @@
 package com.altaria.file.service;
 
 import com.altaria.common.pojos.common.Result;
-import com.altaria.common.pojos.file.entity.Space;
+import com.altaria.common.pojos.space.entity.Space;
 
 public interface SpaceManagementService {
 

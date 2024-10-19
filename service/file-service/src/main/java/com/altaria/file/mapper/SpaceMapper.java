@@ -1,7 +1,7 @@
 package com.altaria.file.mapper;
 
 
-import com.altaria.common.pojos.file.entity.Space;
+import com.altaria.common.pojos.space.entity.Space;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;

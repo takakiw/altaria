@@ -10,7 +10,7 @@ import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
-import com.altaria.common.pojos.file.entity.Space;
+import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.file.mq.UploadMQType;
 import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
@@ -28,7 +28,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
@@ -70,8 +69,6 @@ public class FileManagementServiceImpl implements FileManagementService {
     @Value("${temp.file.path:/temp/file/}")
     private String tempPath;
 
-    @Autowired
-    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @Autowired
     private MinioService minioService;

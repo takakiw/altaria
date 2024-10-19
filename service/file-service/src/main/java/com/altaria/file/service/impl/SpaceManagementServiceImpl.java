@@ -2,8 +2,8 @@ package com.altaria.file.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.pojos.common.Result;
-import com.altaria.common.pojos.file.entity.Space;
-import com.altaria.common.pojos.file.vo.SpaceVO;
+import com.altaria.common.pojos.space.entity.Space;
+import com.altaria.common.pojos.space.vo.SpaceVO;
 import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.SpaceMapper;
 import com.altaria.file.service.SpaceManagementService;
@@ -46,7 +46,7 @@ public class SpaceManagementServiceImpl implements SpaceManagementService {
         dbSpace.setUseSpace(usedSpace);
         int updateSpace = spaceMapper.updateSpace(dbSpace);
         if (updateSpace == 0){
-            return Result.error();
+            throw new RuntimeException("更新空间失败");
         }
         return Result.success();
     }

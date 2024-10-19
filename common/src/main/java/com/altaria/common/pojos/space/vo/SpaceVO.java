@@ -1,4 +1,4 @@
-package com.altaria.common.pojos.file.vo;
+package com.altaria.common.pojos.space.vo;
 
 import lombok.Data;
 

@@ -1,4 +1,4 @@
-package com.altaria.common.pojos.file.entity;
+package com.altaria.common.pojos.space.entity;
 
 import lombok.Data;
 

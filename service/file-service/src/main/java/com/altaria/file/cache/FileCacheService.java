@@ -2,9 +2,8 @@ package com.altaria.file.cache;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.pojos.file.entity.FileInfo;
-import com.altaria.common.pojos.file.entity.Space;
+import com.altaria.common.pojos.space.entity.Space;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;

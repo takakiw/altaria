@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.altaria.file.mapper.SpaceMapper">
-    <update id="updateSpace" parameterType="com.altaria.common.pojos.file.entity.Space">
+    <update id="updateSpace" parameterType="com.altaria.common.pojos.space.entity.Space">
         update space
         <set>
             <if test="useSpace != null">
