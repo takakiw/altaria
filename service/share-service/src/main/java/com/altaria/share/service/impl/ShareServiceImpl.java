@@ -1,9 +1,12 @@
 package com.altaria.share.service.impl;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
 import com.altaria.common.annotation.CheckCookie;
+import com.altaria.common.constants.ShareConstants;
 import com.altaria.common.enums.StatusCodeEnum;
+import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.common.pojos.file.vo.FileInfoVO;
@@ -18,7 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -40,14 +43,18 @@ public class ShareServiceImpl implements ShareService {
         if (userId == null){
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
-
-        Result<List<FileInfo>> result = fileServiceClient.getFileInfo(share.getFids(), userId);
+        Result<List<FileInfo>> result = fileServiceClient.getFileInfos(share.getFids(), userId);
         if (result.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
         List<FileInfo> fileInfos = result.getData();
         if (fileInfos == null || fileInfos.size() == 0){
             return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
+        }
+        if (share.getType() == ShareConstants.TYPE_ONE_FILE){
+            if (fileInfos.size() > 1){
+                return Result.error(StatusCodeEnum.SHARE_TYPE_ERROR);
+            }
         }
         List<Long> dbFids = fileInfos.stream().map(FileInfo::getId).toList();
         String name = fileInfos.get(0).getFileName() + "等" + fileInfos.size() + "个文件";
@@ -99,24 +106,115 @@ public class ShareServiceImpl implements ShareService {
         if (share == null){
             response.setStatus(404);
         }
-        if (share.getExpire() != null && share.getExpire().isBefore(LocalDateTime.now())){
+        Result<List<FileInfo>> path = fileServiceClient.getPath(fid, share.getUid());
+        if (path.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+            response.setStatus(404);
+        }
+        List<FileInfo> data = path.getData();
+        if (data == null || data.size() == 0){
+            response.setStatus(404);
+        }
+        List<FileInfo> fileInfos = data.stream().filter(f -> share.getFids().contains(f.getId())).toList();
+        if (fileInfos.size() == 0){
+            response.setStatus(404);
+        }
+        fileServiceClient.download(response, fid, share.getUid());
+    }
+
+    @CheckCookie
+    @Override
+    public Result<List<FileInfoVO>> getShareListInfo(Long shareId, Long path) {
+        Share shareById = shareMapper.getShareById(shareId);
+        if (shareById == null){
+            return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+        }
+        if (path == null){ // 根目录
+            Result<List<FileInfo>> fileInfo = fileServiceClient.getFileInfos(shareById.getFids(), shareById.getUid());
+            if (fileInfo.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+                return Result.error(StatusCodeEnum.ERROR);
+            }
+            List<FileInfo> data = fileInfo.getData();
+            if (data == null || data.size() == 0){
+                shareMapper.deleteByIds(List.of(shareId), shareById.getUid());
+                return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+            }
+            List<FileInfoVO> fileInfoVOList = data.stream().map(f -> BeanUtil.copyProperties(f, FileInfoVO.class)).toList();
+            return Result.success(fileInfoVOList);
+        }else { // 非根目录
+            // 判断根目录到当前目录是否存在分享文件中
+            if(!checkShareFile(shareById, path)){
+                return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+            }
+            // 该目录被分享，返回该目录下的文件信息
+            Result<PageResult<FileInfo>> childrenList = fileServiceClient.getChildrenList(path, null, null, shareById.getId(), 0);
+            if (childrenList.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+                return Result.error(StatusCodeEnum.ERROR);
+            }
+            PageResult<FileInfo> pageResult = childrenList.getData();
+            return Result.success(pageResult.getRecords().stream().map(f -> BeanUtil.copyProperties(f, FileInfoVO.class)).toList());
+        }
+    }
+
+    private boolean checkShareFile(Share shareById, Long path) {
+        Result<List<FileInfo>> pathResult = fileServiceClient.getPath(path, shareById.getUid());
+        if (pathResult.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+            return false;
+        }
+        List<FileInfo> data = pathResult.getData();
+        if (data == null || data.size() == 0){
+            return false;
+        }
+        List<FileInfo> fileInfos = data.stream().filter(f -> shareById.getFids().contains(f.getId())).toList();
+        if (fileInfos.size() == 0){
+            return false;
+        }
+        return true;
+    }
+
+    @CheckCookie
+    @Override
+    public void previewShareFile(Long shareId, Long fid, HttpServletResponse response) {
+        Share share = shareMapper.getShareById(shareId);
+        if (share == null){
             response.setStatus(404);
         }
         Result<List<FileInfo>> path = fileServiceClient.getPath(fid, share.getUid());
         if (path.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             response.setStatus(404);
         }
+        List<FileInfo> data = path.getData();
+        if (data == null || data.size() == 0){
+            response.setStatus(404);
+        }
+        List<FileInfo> fileInfos = data.stream().filter(f -> share.getFids().contains(f.getId())).toList();
+        if (fileInfos.size() == 0){
+            response.setStatus(404);
+        }
+
     }
 
-    @CheckCookie
     @Override
-    public Result<List<FileInfoVO>> getShareListInfo(Long shareId, Long path, Long userId) {
-        return null;
-    }
-
-    @CheckCookie
-    @Override
-    public void previewShareFile(Long shareId, Long fid, HttpServletResponse response) {
-
+    public Result<List<FileInfoVO>> getSharePath(Long shareId, Long path) {
+        Share share = shareMapper.getShareById(shareId);
+        if (share == null){
+            return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+        }
+        Result<List<FileInfo>> pathResult = fileServiceClient.getPath(path, share.getUid());
+        if (pathResult.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+            return Result.error(StatusCodeEnum.ERROR);
+        }
+        List<FileInfo> data = pathResult.getData();
+        if (data == null || data.size() == 0){
+            return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+        }
+        List<FileInfoVO> sharePath = new ArrayList<>();
+        for (int i = data.size() - 1; i >= 0; i--) {
+            FileInfo fileInfo = data.get(i);
+            sharePath.add(BeanUtil.copyProperties(fileInfo, FileInfoVO.class));
+            if (share.getFids().contains(fileInfo.getId())){
+                break;
+            }
+        }
+        return Result.success(sharePath);
     }
 }

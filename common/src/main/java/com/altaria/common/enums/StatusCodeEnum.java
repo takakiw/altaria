@@ -39,7 +39,9 @@ public enum StatusCodeEnum {
     GATEWAY_ERROR(2020, "网关错误"),
     DIRECTORY_NOT_EXISTS(2021,"目录不存在"),
     CREATE_SHARE_LINK_ERROR(2022, "创建分享链接失败, 请稍后再试"),
-    SHARE_NOT_FOUND(2023, "分享不存在");
+    SHARE_NOT_EXISTS(2023, "分享过期或已经被删除"),
+    SHARE_TYPE_ERROR(2024, "分享类型错误");
+
 
 
     int code;

@@ -10,6 +10,7 @@ public class Share {
     private Long id;
     private Long uid;
     private String name;
+    private Integer type;
     private List<Long> fids;
     private Long visit;
     private LocalDateTime expire;

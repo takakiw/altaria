@@ -1,8 +1,10 @@
 package com.altaria.feign.fallback;
 
+import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.feign.client.FileServiceClient;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,13 +23,24 @@ public class FileServiceClientFallbackFactory implements FallbackFactory<FileSer
             }
 
             @Override
-            public Result<List<FileInfo>> getFileInfo(List<Long> fids, Long uid) {
-                return null;
+            public Result<List<FileInfo>> getFileInfos(List<Long> fids, Long uid) {
+                return Result.error();
             }
 
             @Override
             public Result<List<FileInfo>> getPath(Long path, Long uid) {
-                return null;
+                return Result.error();
+            }
+
+            @Override
+            public Result<PageResult<FileInfo>> getChildrenList(Long id, Integer type, String fileName, Long uid, Integer order) {
+                return Result.error();
+            }
+
+            @Override
+            public void download(HttpServletResponse response, Long id, Long uid) {
+                response.setStatus(404);
+                return;
             }
         };
     }

@@ -19,7 +19,7 @@ public class SpaceServiceClientFallbackFactory implements FallbackFactory<SpaceS
                 spaceVO.setUid(uid);
                 spaceVO.setUseSpace(0L);
                 spaceVO.setTotalSpace(0L);
-                return Result.success();
+                return Result.success(spaceVO);
             }
 
             @Override

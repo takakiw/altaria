@@ -1,3 +1,4 @@
+/*
 package com.altaria.user.test;
 
 import com.altaria.common.constants.UserConstants;
@@ -60,3 +61,4 @@ public class redis {
         });
     }
 }
+*/

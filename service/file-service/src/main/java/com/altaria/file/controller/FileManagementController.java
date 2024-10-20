@@ -29,12 +29,12 @@ public class FileManagementController {
 
     // 通过FeignClient调用, 获取文件信息
     @GetMapping("/info/{fids}")
-    public Result<List<FileInfo>> getFileInfo(@PathVariable("fids") List<Long> fids,
+    public Result<List<FileInfo>> getFileInfos(@PathVariable("fids") List<Long> fids,
                                                @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid){
         String requestPathService = request.getHeader(FeignConstants.REQUEST_ID_HEADER);
         // 判断是否从FeignClient调用
         if (requestPathService== null || !requestPathService.equals(FeignConstants.REQUEST_ID_VALUE)){
-            return null;
+            return Result.error();
         }
         return fileManagementService.getFileInfoBatch(fids, uid);
     }
@@ -133,7 +133,7 @@ public class FileManagementController {
      * @return PageResult<FileInfo>
      */
     @GetMapping("/list/{id}")
-    public Result<PageResult<FileInfo>> get(@PathVariable("id") Long id,
+    public Result<PageResult<FileInfo>> getChildrenList(@PathVariable("id") Long id,
                                             @RequestParam(value = "type", required = false) Integer type,
                                             @RequestParam(value = "fileName" , required = false) String fileName,
                                             @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,

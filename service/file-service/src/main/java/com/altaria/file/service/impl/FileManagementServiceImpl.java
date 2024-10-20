@@ -388,9 +388,20 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (id == null || uid == null) {
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
+        FileInfo file = cacheService.getFile(uid, id);
+        if (file == null){
+            file = fileInfoMapper.getFileById(id, uid);
+            if (file == null){
+                cacheService.saveNullFile(uid, id);
+                return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
+            }
+            cacheService.saveFile(file);
+        }
         List<FileInfo> path = new ArrayList<>();
+        path.add(file);
+        id = file.getPid();
         while (id.compareTo(FileConstants.ROOT_DIR_ID) != 0) {
-            FileInfo file = cacheService.getFile(uid, id);
+            file = cacheService.getFile(uid, id);
             if (file == null){
                 file = fileInfoMapper.getFileById(id, uid);
                 if (file == null){
@@ -631,6 +642,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     }
 
     @GlobalTransactional
+    @Transactional
     @Override
     public Result upload(Long uid, Long fid, Long pid, MultipartFile file, String md5, Integer index, Integer total) {
         if (uid == null || file.isEmpty()){
@@ -700,7 +712,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         long uploadFileSize = cacheService.getUploadFileSize(uid, fid);
         try {
             if (usedSpace.getUseSpace() + uploadFileSize > usedSpace.getTotalSpace()) {
-                log.error("空间不足");
+                log.info("空间不足{}", uid);
                 throw new Exception("空间不足");
             }
             tempDir = new File(tempPath + fid);
@@ -738,7 +750,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             cacheService.deleteUploadFile(uid, fid);
             log.error("文件上传失败");
-            throw new RuntimeException("文件上传失败"); // 抛出异常，确保事务回滚
+            throw new RuntimeException(e.getMessage()); // 抛出异常，确保事务回滚
         }
     }
 
@@ -764,14 +776,14 @@ public class FileManagementServiceImpl implements FileManagementService {
                 }
             }
             int insert = fileInfoMapper.insert(saveFile);
-            if (insert > 0) {
-                spaceServiceClient.updateSpace(saveFile.getUid(), new Space(saveFile.getUid(), saveFile.getSize()));
+            Result result = spaceServiceClient.updateSpace(saveFile.getUid(), new Space(saveFile.getUid(), saveFile.getSize()));
+            if (insert > 0 && result.getCode() == 200) {
                 pathAddSize(saveFile.getUid(), saveFile.getPid(), saveFile.getSize());
                 cacheService.addChildren(saveFile.getUid(), saveFile.getPid(), saveFile);
                 cacheService.saveFile(saveFile);
                 return;
             }
-            throw new Exception("文件保存失败");
+            throw new Exception("文件上传失败");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }finally {

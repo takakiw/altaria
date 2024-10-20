@@ -49,10 +49,15 @@ public class ShareController {
         return shareService.cancelShare(shareIds, userId);
     }
 
-    //  获取分享链接信息
+    // todo 保存到我的云盘
+
+    // 获取分享链接信息
     @GetMapping("/info/{shareId}")
     public Result<ShareVO> getShareInfo(@PathVariable("shareId") Long shareId){
         Share share = shareService.getShareById(shareId);
+        if (share == null){
+            return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+        }
         ShareVO shareVO = BeanUtil.copyProperties(share, ShareVO.class);
         return Result.success(shareVO);
     }
@@ -62,12 +67,15 @@ public class ShareController {
     // 获取分享链接信息（文件列表）
     @GetMapping("/list/{shareId}")
     public Result<List<FileInfoVO>> getShareInfo(@PathVariable("shareId") Long shareId,
-                                                  @RequestParam(value = "path", required = false) Long path,
-                                                  @RequestHeader(UserConstants.USER_ID) Long userId) {
-        return shareService.getShareListInfo(shareId, path, userId);
+                                                  @RequestParam(value = "path", required = false) Long path) {
+        return shareService.getShareListInfo(shareId, path);
     }
 
-
+    // 获取分享的当前文件路径
+    @GetMapping("/path/{shareId}/{path}")
+    public Result<List<FileInfoVO>> getSharePath(@PathVariable("shareId") Long shareId, @PathVariable("path") Long path){
+        return shareService.getSharePath(shareId, path);
+    }
 
 
     // 下载分享文件（直接下载并统计下载次数）
@@ -78,8 +86,6 @@ public class ShareController {
         shareService.downloadShareFile(shareId, fid, response);
     }
 
-
-
     // 预览分享文件
     @GetMapping("/preview/{shareId}/{fid}")
     public void previewShareFile(@PathVariable("shareId") Long shareId,
@@ -87,5 +93,6 @@ public class ShareController {
                                  HttpServletResponse response){
         shareService.previewShareFile(shareId, fid, response);
     }
+
 
 }

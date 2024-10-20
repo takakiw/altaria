@@ -9,6 +9,7 @@ public class ShareVO {
     private Long id;
     private Long uid;
     private String name;
+    private Integer type;
     private LocalDateTime expire;
     private LocalDateTime createTime;
 }

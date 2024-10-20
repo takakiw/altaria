@@ -18,7 +18,9 @@ public interface ShareService {
 
     void downloadShareFile(Long shareId, Long fid, HttpServletResponse response);
 
-    Result<List<FileInfoVO>> getShareListInfo(Long shareId, Long path, Long userId);
+    Result<List<FileInfoVO>> getShareListInfo(Long shareId, Long path);
 
     void previewShareFile(Long shareId, Long fid, HttpServletResponse response);
+
+    Result<List<FileInfoVO>> getSharePath(Long shareId, Long path);
 }
