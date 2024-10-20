@@ -12,8 +12,6 @@ public interface UserService {
 
     Result uploadAvatar(MultipartFile file, Long uId);
 
-    /*void downloadAvatar(String avatar, HttpServletResponse response);*/
-
     Result updateUser(User user, Long uId);
 
     Result sendEmailCode(String email);

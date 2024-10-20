@@ -59,8 +59,7 @@ public class UserServiceImpl implements UserService {
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
         Long queryId = userId.compareTo(-1L) == 0? uId : userId;
-        User user = null;
-        user = cacheService.getUserById(queryId);
+        User user = cacheService.getUserById(queryId);
         if (user == null) {
             user = userMapper.getUserById(queryId);
             if (user == null) {
@@ -73,6 +72,7 @@ public class UserServiceImpl implements UserService {
         if (uId != null && uId.compareTo(queryId) == 0){
             return Result.success(userVO);
         }else {
+            // 加密username 例如abcde => a****
             userVO.setEmail(null);
             userVO.setRole(null);
             return Result.success(userVO);
@@ -111,13 +111,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    /*@Override
-    public void downloadAvatar(String avatar, HttpServletResponse response) {
-        if (StringUtils.isBlank(avatar)){
-            return;
-        }
-        minioService.downloadFile(avatar, response);
-    }*/
 
     @Override
     public Result updateUser(User user, Long uId) {

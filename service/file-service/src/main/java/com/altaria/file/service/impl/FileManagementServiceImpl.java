@@ -29,12 +29,9 @@ import org.redisson.api.RedissonClient;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -87,22 +84,9 @@ public class FileManagementServiceImpl implements FileManagementService {
     }
 
     @Override
-    @GlobalTransactional
-    @Transactional
-    public String test() {
-        FileInfo fileInfo = new FileInfo();
-        fileInfo.setId(IdUtil.getSnowflake().nextId());
-        fileInfo.setFileName("test.txt");
-        fileInfo.setPid(0L);
-        fileInfo.setUid(1L);
-        fileInfo.setType(FileType.IMAGE.getType());
-        fileInfo.setStatus(FileConstants.STATUS_USE);
-        fileInfo.setSize(0L);
-        fileInfo.setMd5("afqefqf3");
-        spaceServiceClient.updateSpace(1L, new Space(1L, 10000L));
-        if(1 > 0)throw new RuntimeException("a");
-        fileInfoMapper.insert(fileInfo);
-        return "test";
+    public Result<List<FileInfo>> getFileInfoBatch(List<Long> fids, Long uid) {
+        List<FileInfo> fileInfos = fileInfoMapper.getFileByIds(fids, uid, FileConstants.STATUS_USE);
+        return Result.success(fileInfos);
     }
 
 
@@ -544,6 +528,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         return Result.success();
     }
 
+    @GlobalTransactional
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Result removeFile(List<Long> ids, Long uid) {
@@ -646,15 +631,14 @@ public class FileManagementServiceImpl implements FileManagementService {
     }
 
     @GlobalTransactional
-    @Transactional
     @Override
     public Result upload(Long uid, Long fid, Long pid, MultipartFile file, String md5, Integer index, Integer total) {
+        if (uid == null || file.isEmpty()){
+            return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
+        }
         long size = file.getSize();
         if (size <= 0){
             return Result.error(StatusCodeEnum.FILE_UPLOAD_FAILED);
-        }
-        if (uid == null || file.isEmpty()){
-            return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
         RLock lock = redissonClient.getLock("upload_" + uid + ":" + pid + ":" + fid + ":" + index);
         try{
@@ -683,6 +667,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                 FileInfo fileByMd5 = fileByMd5s.get(0);
                 long start = System.currentTimeMillis();
                 SpaceVO space = spaceServiceClient.space(uid).getData();
+                log.error(space.toString());
                 System.out.println("秒传：" + (System.currentTimeMillis() - start) + space);
                 if (fileByMd5.getSize() + space.getUseSpace() > space.getTotalSpace()) {
                     log.error("秒传失败，空间不足");
@@ -710,6 +695,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         long l = System.currentTimeMillis();
         SpaceVO usedSpace = spaceServiceClient.space(uid).getData();
         System.out.println("正常传输：" + (System.currentTimeMillis() - l) + usedSpace);
+        log.error(usedSpace.toString());
         cacheService.updateUploadFileSize(uid, fid, size);
         long uploadFileSize = cacheService.getUploadFileSize(uid, fid);
         try {
@@ -779,10 +765,10 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             int insert = fileInfoMapper.insert(saveFile);
             if (insert > 0) {
+                spaceServiceClient.updateSpace(saveFile.getUid(), new Space(saveFile.getUid(), saveFile.getSize()));
                 pathAddSize(saveFile.getUid(), saveFile.getPid(), saveFile.getSize());
                 cacheService.addChildren(saveFile.getUid(), saveFile.getPid(), saveFile);
                 cacheService.saveFile(saveFile);
-                spaceServiceClient.updateSpace(saveFile.getUid(), new Space(saveFile.getUid(), saveFile.getSize()));
                 return;
             }
             throw new Exception("文件保存失败");

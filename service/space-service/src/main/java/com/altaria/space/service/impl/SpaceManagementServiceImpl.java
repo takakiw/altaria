@@ -10,7 +10,6 @@ import com.altaria.space.service.SpaceManagementService;
 import io.seata.spring.annotation.GlobalTransactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SpaceManagementServiceImpl implements SpaceManagementService {
@@ -39,7 +38,7 @@ public class SpaceManagementServiceImpl implements SpaceManagementService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @GlobalTransactional
     public Result updateSpace(Long uid, Long usedSpace) {
         if (uid == null || usedSpace == null){
             return Result.error();

@@ -6,8 +6,6 @@ import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.user.entity.User;
 import com.altaria.common.pojos.user.vo.UserVO;
 import com.altaria.user.service.UserService;
-
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 
 
 @RestController
@@ -51,15 +48,6 @@ public class UserController {
         return userService.uploadAvatar(file, uId);
     }
 
-    /**
-     * 下载头像
-     * @param avatar
-     * @param response
-     *//*
-    @GetMapping("/avatar/{avatar}")
-    public void getAvatar(@PathVariable("avatar") String avatar, HttpServletResponse response) {
-        userService.downloadAvatar(avatar, response);
-    }*/
 
     /**
      * 更新用户信息

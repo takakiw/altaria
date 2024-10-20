@@ -124,6 +124,7 @@
             </if>
             and uid = #{uid}
         </where>
+        order by update_time desc
     </select>
     <select id="selectOrder" resultType="com.altaria.common.pojos.file.entity.FileInfo">
         select * from file

@@ -1,6 +1,5 @@
 package com.altaria.feign.client;
 
-
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.space.entity.Space;
@@ -12,13 +11,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(contextId = "spaceServiceClient", value = "gateway-service", fallbackFactory = SpaceServiceClientFallbackFactory.class, path = "/space")
+@FeignClient(contextId = "spaceServiceClient", value = "space-service", fallbackFactory = SpaceServiceClientFallbackFactory.class)
 public interface SpaceServiceClient {
 
-    @GetMapping("/info")
+    @GetMapping("/space/info")
     public Result<SpaceVO> space(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
-    @PutMapping("/update")
+    @PutMapping("/space/update")
     public Result updateSpace(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
                               @RequestBody Space space);
 }

@@ -5,7 +5,7 @@ spring:
   application:
     name: space-service
   config:
-    import: nacos:space-service-space
+    import: nacos:space-service-space, nacos:seata-config
   cloud:
     nacos:
       discovery:
@@ -18,30 +18,3 @@ spring:
         username: nacos
         password: nacos
       server-addr: 192.168.96.132:8848
-
-seata:
-  registry: # TC服务注册中心的配置，微服务根据这些信息去注册中心获取tc服务地址
-    # 参考tc服务自己的registry.conf中的配置
-    type: nacos
-    nacos: # tc
-      server-addr: 192.168.96.132:8848
-      group: DEFAULT_GROUP
-      application: seata-server # tc服务在nacos中的服务名称
-      cluster: default # 集群名称
-      username: nacos
-      password: nacos
-  config:
-    type: nacos
-    nacos:
-      server-addr: 192.168.96.132:8848
-      username: nacos
-      password: nacos
-      group: DEFAULT_GROUP
-      data-id: seata-server.properties
-  tx-service-group: default_tx_group
-  service:
-    vgroup-mapping:
-      default_tx_group: default
-    vgroupMapping:
-      default_tx_group: default
-  data-source-proxy-mode: AT

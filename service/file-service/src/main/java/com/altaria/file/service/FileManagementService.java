@@ -16,9 +16,9 @@ public interface FileManagementService {
 
     Result renameFile(FileInfo fileInfo, Long uid);
 
-    public Result<PageResult<FileInfo>> getPagedFileList(Long id, Long uid, Integer type, String fileName, Integer order);
+    Result<PageResult<FileInfo>> getPagedFileList(Long id, Long uid, Integer type, String fileName, Integer order);
 
-    Result getPath(Long id, Long uid);
+    Result<List<FileInfo>> getPath(Long id, Long uid);
 
     void download(HttpServletResponse response, Long id, Long uid);
 
@@ -34,5 +34,6 @@ public interface FileManagementService {
 
     String uploadImage(MultipartFile file);
 
-    String test();
+    Result<List<FileInfo>> getFileInfoBatch(List<Long> fids, Long uid);
+
 }

@@ -1,0 +1,23 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: share-service
+  config:
+    import: nacos:share-service-space
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.96.132:8848
+        username: nacos
+        password: nacos
+      config:
+        server-addr: 192.168.96.132:8848
+        file-extension: yaml
+        username: nacos
+        password: nacos
+      server-addr: 192.168.96.132:8848
+
+file:
+  share:
+    url: http://192.168.96.132:9000

@@ -1,10 +1,12 @@
 package com.altaria.file.controller;
 
+import com.altaria.common.constants.FeignConstants;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.file.service.FileManagementService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,16 +20,34 @@ import java.util.List;
 public class FileManagementController {
 
 
+    @Autowired
+    private HttpServletRequest request;
+
 
     @Autowired
     private FileManagementService fileManagementService;
 
+    // 通过FeignClient调用, 获取文件信息
+    @GetMapping("/info/{fids}")
+    public Result<List<FileInfo>> getFileInfo(@PathVariable("fids") List<Long> fids,
+                                               @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid){
+        String requestPathService = request.getHeader(FeignConstants.REQUEST_ID_HEADER);
+        // 判断是否从FeignClient调用
+        if (requestPathService== null || !requestPathService.equals(FeignConstants.REQUEST_ID_VALUE)){
+            return null;
+        }
+        return fileManagementService.getFileInfoBatch(fids, uid);
+    }
+
+
+
 
     // 通过接口调用上传图片，内部使用FeignClient进行调用
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public String uploadImage(@RequestPart("file") MultipartFile file, @RequestHeader("request-path-service") String requestPathService){
-        // 判断是否有request-path-service头部，如果有，则使用FeignClient进行调用，否则使用内部上传图片方法
-        if (requestPathService== null || requestPathService.equals("feign-api")){
+    public String uploadImage(@RequestPart("file") MultipartFile file){
+        String requestPathService = request.getHeader(FeignConstants.REQUEST_ID_HEADER);
+        // 判断是否从FeignClient调用
+        if (requestPathService== null || !requestPathService.equals(FeignConstants.REQUEST_ID_VALUE)){
             return null;
         }
         return fileManagementService.uploadImage(file);
@@ -35,7 +55,10 @@ public class FileManagementController {
 
 
     /**
-     * 上传·
+     * 上传文件
+     * @param uid
+     * @param fid
+     * @param pid
      * @param file
      * @param md5
      * @param index
@@ -125,7 +148,7 @@ public class FileManagementController {
      * @return Result
      */
     @GetMapping("/path")
-    public Result getPath(@RequestParam(value = "path", required = true) Long path,
+    public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = true) Long path,
                           @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.getPath(path, uid);
     }

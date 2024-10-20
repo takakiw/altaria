@@ -17,19 +17,27 @@
         INSERT INTO share (id, uid, fids, expire, url, sign)
         values (#{id}, #{uid}, #{fids,typeHandler=com.altaria.share.handler.LongListTypeHandler}, #{expire}, #{url}, #{sign})
     </insert>
+    <delete id="deleteByIds">
+        DELETE FROM share
+        WHERE uid = #{uid} AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
 
     <select id="select" resultType="com.altaria.common.pojos.share.entity.Share" resultMap="shareResultMap">
         SELECT * from share
         <where>
             <if test="id!= null">
-                id = #{id}
+                id = #{id},
             </if>
             <if test="uid!= null">
-                AND uid = #{uid}
+                AND uid = #{uid},
             </if>
             <if test="sign!= null">
-                AND sign = #{sign}
+                AND sign = #{sign},
             </if>
+            and expire > now()
         </where>
         order by create_time desc
     </select>
