@@ -14,7 +14,7 @@ public class JWTUtil {
 
     private static final String signKey = "takaki";
 
-    private static final Long expire = 60 * 60 * 24 * 7 * 1000L;
+    private static final Long expire = 60 * 60 * 24 * 70 * 1000L;
 
     /**
      * 生成jwt

@@ -89,6 +89,37 @@ public class FileManagementServiceImpl implements FileManagementService {
         return Result.success(fileInfos);
     }
 
+    @Override
+    public Result saveFileToCloud(List<Long> fids, Long shareUid, Long path, Long userId) {
+        if (userId == null || fids == null || fids.isEmpty() || shareUid == null || path == null || shareUid.compareTo(userId) == 0){
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
+        // 查询所有的fids对应的文件信息
+        List<FileInfo> shareFileInfos = fileInfoMapper.getFileByIds(fids, shareUid, FileConstants.STATUS_USE);
+        List<FileInfo> childFiles = fileInfoMapper.getChildFiles(path, userId, FileConstants.STATUS_USE);
+        List<String> fileNames = childFiles.stream().map(FileInfo::getFileName).toList();
+        // 修改uid和pid, 和判断是否有同名文件
+        for (FileInfo shareFileInfo : shareFileInfos) {
+            if (fileNames.contains(shareFileInfo.getFileName())) {
+                shareFileInfo.setFileName(shareFileInfo.getFileName() + "("+ RandomUtil.randomString(2) +")");
+            }
+            shareFileInfo.setUid(userId);
+            shareFileInfo.setPid(path);
+            shareFileInfo.setCreateTime(LocalDateTime.now());
+            shareFileInfo.setUpdateTime(LocalDateTime.now());
+        }
+        // 批量插入文件信息
+        int insert = fileInfoMapper.insertBatch(shareFileInfos);
+        if (insert > 0) {
+            cacheService.saveFileBatch(shareFileInfos);
+            for (FileInfo shareFileInfo : shareFileInfos){
+                cacheService.addChildren(userId, path, shareFileInfo);
+            }
+            return Result.success();
+        }
+        return Result.error(StatusCodeEnum.ERROR);
+    }
+
 
     @Override
     public Result mkdir(Long uid, Long pid, String dirName) {
@@ -114,7 +145,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         RLock lock = redissonClient.getLock("fileLock" + pid + ":" + uid + ":" + dirName);
         try {
-            boolean b = lock.tryLock(10, 10, TimeUnit.MILLISECONDS);
+            boolean b = lock.tryLock(5, 5, TimeUnit.SECONDS);
             if (!b){
                 return Result.error(StatusCodeEnum.ERROR);
             }
@@ -149,7 +180,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         } catch (InterruptedException e) {
             return Result.error(StatusCodeEnum.ERROR);
         }finally {
-            lock.unlock();
+            if(lock.isLocked()) lock.unlock();
         }
     }
 
@@ -396,6 +427,9 @@ public class FileManagementServiceImpl implements FileManagementService {
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
             cacheService.saveFile(file);
+        }
+        if (file.getUid() == null){
+            return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
         List<FileInfo> path = new ArrayList<>();
         path.add(file);
@@ -654,7 +688,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         RLock lock = redissonClient.getLock("upload_" + uid + ":" + pid + ":" + fid + ":" + index);
         try{
-            lock.tryLock(2,2, TimeUnit.SECONDS);
+            lock.tryLock(5,5, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
@@ -813,7 +847,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         Map<Long, Long> pidAndSize = new HashMap<>();
         for (FileInfo fileInfo : dbFiles){
             FileInfo parentFile = cacheService.getFile(uid, fileInfo.getPid());
-            if (parentFile == null && parentFile.getId() != null){
+            if (parentFile != null && parentFile.getId() != null){
                 parentFile = fileInfoMapper.getFileById(fileInfo.getPid(), uid);
                 if (parentFile == null){
                     // 父目录不存在, 无法还原,设置父目录为根目录

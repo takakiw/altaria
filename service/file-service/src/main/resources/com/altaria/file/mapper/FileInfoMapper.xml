@@ -5,6 +5,14 @@
         insert into file(id, uid, url, file_name, type, size, md5, pid, cover, transformed)
         values (#{id}, #{uid}, #{url}, #{fileName}, #{type}, #{size}, #{md5}, #{pid}, #{cover}, #{transformed})
     </insert>
+
+    <insert id="insertBatch">
+        insert into file(id, uid, url, file_name, type, size, md5, pid, cover, transformed)
+        values
+        <foreach collection="fileInfos" item="fileInfo" separator=",">
+            (#{fileInfo.id}, #{fileInfo.uid}, #{fileInfo.url}, #{fileInfo.fileName}, #{fileInfo.type}, #{fileInfo.size}, #{fileInfo.md5}, #{fileInfo.pid}, #{fileInfo.cover}, #{fileInfo.transformed})
+        </foreach>
+    </insert>
     <update id="update">
         update file
         <set>

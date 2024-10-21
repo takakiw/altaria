@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-@Component
+//@Component
 @Aspect
 public class CheckAspect {
 

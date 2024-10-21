@@ -42,7 +42,9 @@ public class AuthGlobalFilter implements GlobalFilter {
                 return handleInvalidToken(response);
             }
         }
-        return chain.filter(exchange);
+        ServerWebExchange build = exchange.mutate().request(builder -> builder.header(UserConstants.USER_ID, "1")).build();
+        return chain.filter(build);
+        //return chain.filter(exchange);
     }
 
     private Mono<Void> handleInvalidToken(ServerHttpResponse response) {

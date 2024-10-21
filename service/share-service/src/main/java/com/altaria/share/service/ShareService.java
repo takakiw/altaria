@@ -23,4 +23,6 @@ public interface ShareService {
     void previewShareFile(Long shareId, Long fid, HttpServletResponse response);
 
     Result<List<FileInfoVO>> getSharePath(Long shareId, Long path);
+
+    Result saveToMyCloud(Long shareId, List<Long> fids, Long userId, Long path);
 }

@@ -10,6 +10,7 @@ import com.altaria.common.pojos.share.entity.Share;
 import com.altaria.common.pojos.share.vo.ShareVO;
 import com.altaria.share.service.ShareService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +28,7 @@ public class ShareController {
     //  创建分享链接（文件）
     @PostMapping("/create")
     public Result<Share> creatShareLink(@RequestHeader(UserConstants.USER_ID) Long userId,
-                                          @RequestBody Share share){
+                                          @RequestBody @Valid Share share){
         return shareService.createShareLink(userId, share);
     }
 
@@ -49,7 +50,14 @@ public class ShareController {
         return shareService.cancelShare(shareIds, userId);
     }
 
-    // todo 保存到我的云盘
+    //  保存到我的云盘
+    @PostMapping("/save/{shareId}/fids")
+    public Result saveToMyCloud(@PathVariable("shareId") Long shareId,
+                                @RequestBody List<Long> fids,
+                                @RequestHeader(UserConstants.USER_ID) Long userId,
+                                @RequestParam(value = "path") Long path){
+        return shareService.saveToMyCloud(shareId, fids, userId, path);
+    }
 
     // 获取分享链接信息
     @GetMapping("/info/{shareId}")
@@ -61,7 +69,6 @@ public class ShareController {
         ShareVO shareVO = BeanUtil.copyProperties(share, ShareVO.class);
         return Result.success(shareVO);
     }
-
 
 
     // 获取分享链接信息（文件列表）
@@ -93,6 +100,4 @@ public class ShareController {
                                  HttpServletResponse response){
         shareService.previewShareFile(shareId, fid, response);
     }
-
-
 }

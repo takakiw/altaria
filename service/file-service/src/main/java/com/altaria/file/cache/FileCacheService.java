@@ -132,9 +132,11 @@ public class FileCacheService {
         }
     }
 
-    public void updateFileCover(Long uid, Long fid, String cover){
+    public void updateFileCoverAndUrl(Long uid, Long fid, String cover, String url){
         if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PREFIX + uid + ":" + fid))){
+            System.out.println("cover:" + cover + " url:" + url);
             redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "cover", cover);
+            redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + fid, "url", url);
         }
     }
 
@@ -339,5 +341,9 @@ public class FileCacheService {
 
     public boolean existsRecycleChildren(Long uid) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(FILE_RECYCLE_PARENT_PREFIX + uid));
+    }
+
+    public void updateFileTransformed(Long uid, long dbId, Integer transformed) {
+        redisTemplate.opsForHash().put(FILE_PREFIX + uid + ":" + dbId, "transformed", transformed);
     }
 }

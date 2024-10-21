@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 定义日志输出格式的模式 -->
+    <property name="LOG_PATTERN" value="%date{MM-dd HH:mm:ss} %highlight(%-5level) [%thread] %logger{35} %msg%n" />
+
+    <!-- 控制台日志输出配置 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern> <!-- 使用上面定义的日志格式 -->
+        </encoder>
+    </appender>
+
+    <!-- 文件日志输出配置 -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>.logs/share-service.log</file> <!-- 日志文件的位置 -->
+        <encoder>
+            <pattern>%date{MM-dd HH:mm:ss} %-5level [%thread] %logger{35} %msg%n</pattern> <!-- 使用上面定义的日志格式 -->
+        </encoder>
+    </appender>
+
+
+    <!-- 定义根日志记录器的级别和附加的 appender -->
+    <root level="info">
+        <appender-ref ref="CONSOLE" /> <!-- 参考控制台 appender -->
+        <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
+    </root>
+
+    <!-- 为特定包或类定义自定义日志记录器 -->
+    <logger name="com.altaria.share.service" level="info">
+
+    </logger> <!-- com.itheima.service 包的日志级别为 INFO -->
+    <logger name="com.altaria.share.mapper" level="debug">
+
+    </logger> <!-- com.itheima.mapper 包的日志级别为 DEBUG -->
+    <logger name="com.altaria.share.controller" level="info">
+
+    </logger>
+
+</configuration>

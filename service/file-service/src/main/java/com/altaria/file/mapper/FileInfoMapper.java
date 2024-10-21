@@ -53,4 +53,7 @@ public interface FileInfoMapper {
     int updateURLAndCoverByMd5(@Param("url") String url, @Param("cover") String cover, @Param("md5") String md5, @Param("transformed") Integer transformed);
     @Select("SELECT * FROM file WHERE uid = #{uid} AND status = 2")
     List<FileInfo> getRecycleFiles(Long uid);
+
+
+    int insertBatch(List<FileInfo> fileInfos);
 }

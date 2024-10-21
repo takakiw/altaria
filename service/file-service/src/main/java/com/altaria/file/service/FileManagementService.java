@@ -36,4 +36,5 @@ public interface FileManagementService {
 
     Result<List<FileInfo>> getFileInfoBatch(List<Long> fids, Long uid);
 
+    Result saveFileToCloud(List<Long> fids, Long shareUid, Long path, Long userId);
 }

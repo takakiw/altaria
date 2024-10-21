@@ -3,8 +3,8 @@ package com.altaria.feign.fallback;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.common.pojos.file.entity.SaveShare;
 import com.altaria.feign.client.FileServiceClient;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,9 +38,8 @@ public class FileServiceClientFallbackFactory implements FallbackFactory<FileSer
             }
 
             @Override
-            public void download(HttpServletResponse response, Long id, Long uid) {
-                response.setStatus(404);
-                return;
+            public Result saveFileToCloud(SaveShare saveShare) {
+                return Result.error();
             }
         };
     }

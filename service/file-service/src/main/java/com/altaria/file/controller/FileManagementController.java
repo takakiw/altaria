@@ -5,6 +5,7 @@ import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.common.pojos.file.entity.SaveShare;
 import com.altaria.file.service.FileManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -51,6 +52,16 @@ public class FileManagementController {
             return null;
         }
         return fileManagementService.uploadImage(file);
+    }
+
+    @PostMapping("/saveShare")
+    public Result saveFileToCloud(@RequestBody SaveShare saveShare){
+        String requestPathService = request.getHeader(FeignConstants.REQUEST_ID_HEADER);
+        // 判断是否从FeignClient调用
+        if (requestPathService== null || !requestPathService.equals(FeignConstants.REQUEST_ID_VALUE)){
+            return Result.error();
+        }
+        return fileManagementService.saveFileToCloud(saveShare.getFids(), saveShare.getShareUid(), saveShare.getPath(), saveShare.getUserId());
     }
 
 

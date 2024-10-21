@@ -39,6 +39,7 @@ public class FilePreviewServiceImpl implements FilePreviewService {
     public void preview(HttpServletResponse response, Long id, Long uid) {
         if (id == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
+            return;
         }
         FileInfo file = cacheService.getFile(uid, id);
         if (file == null){
@@ -53,13 +54,14 @@ public class FilePreviewServiceImpl implements FilePreviewService {
         if (file.getId() == null
                 || file.getType().equals(FileType.DIRECTORY.getType())
                 || file.getType().equals(FileType.VIDEO.getType())) {
-            writerResponse(response, StatusCodeEnum.FILE_CANNOT_PREVIEW); // 文件不能预览
+            writerResponse(response, StatusCodeEnum.ILLEGAL_REQUEST); // 文件不能预览
             return;
         }
         if (file.getUrl() == null){
             writerResponse(response, StatusCodeEnum.FILE_TRANSCODING);
             return;
         }
+        minioService.preview(file.getUrl(), response);
     }
 
     @Override
@@ -105,11 +107,14 @@ public class FilePreviewServiceImpl implements FilePreviewService {
             }
             cacheService.saveFile(file);
         }
-        if (file.getId() == null ||
-                !file.getType().equals(FileType.VIDEO.getType())){
-            writerResponse(response, StatusCodeEnum.FILE_CANNOT_PREVIEW); // 文件不能预览
+
+        if (file.getId() == null){
+            writerResponse(response, StatusCodeEnum.FILE_CANNOT_PREVIEW);
             return;
         }
+        // 视频文件才可以预览
+        if (file.getType().compareTo(FileType.VIDEO.getType()) != 0
+        && file.getType().compareTo(FileType.AUDIO.getType()) != 0)
         if (file.getUrl() == null){
             writerResponse(response, StatusCodeEnum.FILE_TRANSCODING);
             return;

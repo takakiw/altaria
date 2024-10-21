@@ -14,7 +14,6 @@ public interface ShareMapper {
 
     List<Share> select(Share share);
 
-    @Select("SELECT * FROM share WHERE id = #{shareId} AND expire > NOW()")
     Share getShareById(@Param("shareId") Long shareId);
 
     int deleteByIds(@Param("ids") List<Long> ids, @Param("uid") Long uid);

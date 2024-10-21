@@ -4,7 +4,9 @@ import com.altaria.common.constants.FeignConstants;
 import com.altaria.feign.fallback.SpaceServiceClientFallbackFactory;
 import feign.RequestInterceptor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
+@Configuration
 public class SpaceServiceFeignConfig {
 
 

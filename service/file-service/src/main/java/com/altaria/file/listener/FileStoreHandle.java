@@ -5,6 +5,7 @@ import com.altaria.common.constants.MinioConstants;
 import com.altaria.common.enums.FileType;
 import com.altaria.common.pojos.file.mq.UploadMQType;
 import com.altaria.common.utils.FfmpegUtil;
+import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.minio.service.MinioService;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,9 @@ public class FileStoreHandle {
 
     @Autowired
     private FileInfoMapper fileInfoMapper;
+
+    @Autowired
+    private FileCacheService cacheService;
 
     @RabbitListener(queues = "delete-avatar-queue")
     public void deleteAvatar(String message) {
@@ -103,6 +107,7 @@ public class FileStoreHandle {
                         log.error("数据库更新失败, 文件id: {},用户id: {}", dbId, uid);
                         throw new RuntimeException("数据库更新失败");
                     }
+
                 } else if (type.compareTo(FileType.IMAGE.getType()) == 0) { // 压缩图片
                     FfmpegUtil.compressImage(data, FileConstants.IMAGE_WIDTH,cover, false); // 压缩图片
                     // 上传minio
@@ -127,10 +132,14 @@ public class FileStoreHandle {
                         throw new RuntimeException("数据库更新失败");
                     }
                 }
+                // 更新缓存中文件信息，包括url和封面，以及转码状态
+                cacheService.updateFileCoverAndUrl(uid, dbId,  minioId + "_.jpg",minioId + suffix);
+                cacheService.updateFileTransformed(uid, dbId, FileConstants.TRANSFORMED_END);
             }catch (Exception e){
                 minioService.deleteFile(minioId + suffix);
                 minioService.deleteFile(minioId + "_.jpg");
                 fileInfoMapper.updateURLAndCoverByMd5(null, null, md5, FileConstants.TRANSFORMED_ERROR);
+                cacheService.updateFileTransformed(uid, dbId, FileConstants.TRANSFORMED_ERROR);
             }
         }catch (Exception e){
             log.error("转码失败, 文件id: {},用户id: {}, 错误信息: {}", dbId, uid, e.getMessage());

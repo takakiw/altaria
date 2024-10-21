@@ -5,7 +5,10 @@
     <resultMap id="shareResultMap" type="com.altaria.common.pojos.share.entity.Share">
         <id property="id" column="id" />
         <result property="uid" column="uid" />
+        <result property="name" column="name" />
+        <result property="type" column="type" />
         <result property="fids" column="fids" typeHandler="com.altaria.share.handler.LongListTypeHandler" />
+        <result property="visit" column="visit"/>
         <result property="expire" column="expire" />
         <result property="url" column="url" />
         <result property="sign" column="sign" />
@@ -13,9 +16,9 @@
     </resultMap>
 
 
-    <insert id="insert">
-        INSERT INTO share (id, uid, fids, expire, url, sign)
-        values (#{id}, #{uid}, #{fids,typeHandler=com.altaria.share.handler.LongListTypeHandler}, #{expire}, #{url}, #{sign})
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO share (id, uid, name, type, fids, expire, url, sign)
+        values (#{id}, #{uid}, #{name}, #{type}, #{fids,typeHandler=com.altaria.share.handler.LongListTypeHandler}, #{expire}, #{url}, #{sign})
     </insert>
     <delete id="deleteByIds">
         DELETE FROM share
@@ -25,20 +28,23 @@
         </foreach>
     </delete>
 
-    <select id="select" resultType="com.altaria.common.pojos.share.entity.Share" resultMap="shareResultMap">
+    <select id="select" resultMap="shareResultMap">
         SELECT * from share
         <where>
             <if test="id!= null">
-                id = #{id},
+                id = #{id}
             </if>
             <if test="uid!= null">
-                AND uid = #{uid},
+                AND uid = #{uid}
             </if>
             <if test="sign!= null">
-                AND sign = #{sign},
+                AND sign = #{sign}
             </if>
             and expire > now()
         </where>
         order by create_time desc
+    </select>
+    <select id="getShareById" resultMap="shareResultMap">
+        SELECT * FROM share WHERE id = #{shareId} AND expire > NOW()
     </select>
 </mapper>
