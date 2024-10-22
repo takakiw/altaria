@@ -15,6 +15,7 @@ import com.altaria.common.pojos.file.vo.FileInfoVO;
 import com.altaria.common.pojos.share.entity.Share;
 import com.altaria.feign.client.FileServiceClient;
 import com.altaria.minio.service.MinioService;
+import com.altaria.share.cache.ShareCacheService;
 import com.altaria.share.mapper.ShareMapper;
 import com.altaria.share.service.ShareService;
 import io.micrometer.common.util.StringUtils;
@@ -43,6 +44,8 @@ public class ShareServiceImpl implements ShareService {
     @Autowired
     private FileServiceClient fileServiceClient;
 
+    @Autowired
+    private ShareCacheService cacheService;
 
     @Autowired
     private MinioService minioService;
@@ -88,6 +91,7 @@ public class ShareServiceImpl implements ShareService {
         if (insert > 0) {
             dbShare.setVisit(0L);
             dbShare.setCreateTime(LocalDateTime.now());
+            cacheService.saveShareInfo(dbShare);
             return Result.success(dbShare);
         }
         return Result.error(StatusCodeEnum.CREATE_SHARE_LINK_ERROR);
@@ -95,13 +99,34 @@ public class ShareServiceImpl implements ShareService {
 
     @Override
     public List<Share> getShareList(Long userId) {
-        Share share = new Share();
-        share.setUid(userId);
-        return shareMapper.select(share);
+        if (cacheService.KeyExists(userId)){
+            List<Share> userAllShare = cacheService.getUserAllShare(userId);
+            List<Share> shares = userAllShare.stream().filter(share -> share.getExpire().isAfter(LocalDateTime.now())).toList();
+            cacheService.deleteShareBatch(userAllShare.stream().filter(share -> share.getExpire().isBefore(LocalDateTime.now())).toList());
+            return shares;
+        }else{
+            Share share = new Share();
+            share.setUid(userId);
+            List<Share> shareList = shareMapper.select(share);
+            cacheService.saveUserAllShare(userId, shareList);
+            return shareList.stream().filter(s -> s.getExpire().isAfter(LocalDateTime.now())).toList();
+        }
     }
 
     @Override
     public Share getShareById(Long shareId) {
+        Share share = cacheService.getShareInfo(shareId);
+        if (share == null){
+            share = shareMapper.getShareById(shareId);
+            if (share == null){
+                cacheService.saveNullShareInfo(shareId);
+                return null;
+            }
+            cacheService.saveShareInfo(share);
+        }
+        if (share.getUid() == null || share.getExpire().isBefore(LocalDateTime.now())){
+            shareMapper.deleteByIds(List.of(shareId), share.getUid());
+        }
         return shareMapper.getShareById(shareId);
     }
 
@@ -110,7 +135,14 @@ public class ShareServiceImpl implements ShareService {
         if (shareIds == null || shareIds.size() == 0 || userId == null){
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
-        shareMapper.deleteByIds(shareIds, userId);
+        // 查询数据库中是否存在这些分享
+        List<Share> dbShares = shareMapper.getShareByIdBatch(userId, shareIds);
+        List<Long> realIds = dbShares.stream().map(Share::getId).toList();
+        shareMapper.deleteByIds(realIds, userId);
+        if (cacheService.KeyExists(userId)) {
+            cacheService.deleteUserShare(userId, realIds);
+        }
+        cacheService.deleteShareBatch(dbShares);
         return Result.success();
     }
 
@@ -118,13 +150,22 @@ public class ShareServiceImpl implements ShareService {
     @Override
     public void downloadShareFile(Long shareId, Long fid, HttpServletResponse response) {
         // 获取分享信息
-        Share share = shareMapper.getShareById(shareId);
-        if (share == null){
+        Share shareInfo = cacheService.getShareInfo(shareId);
+        if (shareInfo == null){
+            shareInfo = shareMapper.getShareById(shareId);
+            if (shareInfo == null){
+                cacheService.saveNullShareInfo(shareId);
+                response.setStatus(404);
+                return;
+            }
+            cacheService.saveShareInfo(shareInfo);
+        }
+        if (shareInfo.getUid() == null || shareInfo.getExpire().isBefore(LocalDateTime.now())){
             response.setStatus(404);
             return;
         }
         // 获取文件路径
-        Result<List<FileInfo>> path = fileServiceClient.getPath(fid, share.getUid());
+        Result<List<FileInfo>> path = fileServiceClient.getPath(fid, shareInfo.getUid());
         if (path.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             response.setStatus(404);
             return;
@@ -135,7 +176,8 @@ public class ShareServiceImpl implements ShareService {
             return;
         }
         // 判断文件是否在分享列表中
-        List<FileInfo> fileInfos = data.stream().filter(f -> share.getFids().contains(f.getId())).toList();
+        Share finalShareInfo = shareInfo;
+        List<FileInfo> fileInfos = data.stream().filter(f -> finalShareInfo.getFids().contains(f.getId())).toList();
         if (fileInfos.size() == 0){
             response.setStatus(404);
             return;
@@ -157,13 +199,22 @@ public class ShareServiceImpl implements ShareService {
     @Override
     public void previewShareFile(Long shareId, Long fid, HttpServletResponse response) {
         // 获取分享信息
-        Share share = shareMapper.getShareById(shareId);
-        if (share == null){
+        Share shareInfo = cacheService.getShareInfo(shareId);
+        if (shareInfo == null){
+            shareInfo = shareMapper.getShareById(shareId);
+            if (shareInfo == null){
+                cacheService.saveNullShareInfo(shareId);
+                response.setStatus(404);
+                return;
+            }
+            cacheService.saveShareInfo(shareInfo);
+        }
+        if (shareInfo.getUid() == null || shareInfo.getExpire().isBefore(LocalDateTime.now())){
             response.setStatus(404);
             return;
         }
         // 获取文件路径
-        Result<List<FileInfo>> path = fileServiceClient.getPath(fid, share.getUid());
+        Result<List<FileInfo>> path = fileServiceClient.getPath(fid, shareInfo.getUid());
         if (path.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             response.setStatus(404);
             return;
@@ -174,7 +225,8 @@ public class ShareServiceImpl implements ShareService {
             return;
         }
         // 判断文件是否在分享列表中
-        List<FileInfo> fileInfos = data.stream().filter(f -> share.getFids().contains(f.getId())).toList();
+        Share finalShareInfo = shareInfo;
+        List<FileInfo> fileInfos = data.stream().filter(f -> finalShareInfo.getFids().contains(f.getId())).toList();
         if (fileInfos.size() == 0){
             response.setStatus(404);
             return;
@@ -202,31 +254,42 @@ public class ShareServiceImpl implements ShareService {
     @CheckCookie
     @Override
     public Result<List<FileInfoVO>> getShareListInfo(Long shareId, Long path) {
-        Share shareById = shareMapper.getShareById(shareId);
-        if (shareById == null){
+        // 获取分享信息
+        Share shareInfo = cacheService.getShareInfo(shareId);
+        if (shareInfo == null){
+            shareInfo = shareMapper.getShareById(shareId);
+            if (shareInfo == null){
+                cacheService.saveNullShareInfo(shareId);
+                return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+            }
+            cacheService.saveShareInfo(shareInfo);
+        }
+        if (shareInfo.getUid() == null || shareInfo.getExpire().isBefore(LocalDateTime.now())){
             return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
         }
-        System.out.println("shareById = " + shareById);
         if (path == null){ // 根目录
-            Result<List<FileInfo>> fileInfo = fileServiceClient.getFileInfos(shareById.getFids(), shareById.getUid());
+            Result<List<FileInfo>> fileInfo = fileServiceClient.getFileInfos(shareInfo.getFids(), shareInfo.getUid());
             if (fileInfo.getCode() != StatusCodeEnum.SUCCESS.getCode()){
                 return Result.error(fileInfo.getMsg());
             }
             List<FileInfo> data = fileInfo.getData();
             if (data == null || data.size() == 0){
-                shareMapper.deleteByIds(List.of(shareId), shareById.getUid());
+                shareMapper.deleteByIds(List.of(shareId), shareInfo.getUid());
+                cacheService.deleteShareBatch(List.of(shareInfo));
+                cacheService.deleteUserShare(shareInfo.getUid(), List.of(shareId));
                 return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
             }
             List<FileInfoVO> fileInfoVOList = data.stream().map(f -> BeanUtil.copyProperties(f, FileInfoVO.class)).toList();
             return Result.success(fileInfoVOList);
         }else { // 非根目录
             // 创建两个异步任务
+            Share finalShareInfo = shareInfo;
             CompletableFuture<Boolean> isShareFileFuture = CompletableFuture.supplyAsync(() ->
-                    checkShareFile(shareById, path)
+                    checkShareFile(finalShareInfo, path)
             );
 
             CompletableFuture<Result<PageResult<FileInfo>>> childrenListFuture = CompletableFuture.supplyAsync(() ->
-                    fileServiceClient.getChildrenList(path, null, null, shareById.getUid(), 0)
+                    fileServiceClient.getChildrenList(path, null, null, finalShareInfo.getUid(), 0)
             );
 
             // 等待两个任务完成，然后根据检查的结果决定下一步
@@ -265,8 +328,17 @@ public class ShareServiceImpl implements ShareService {
 
     @Override
     public Result<List<FileInfoVO>> getSharePath(Long shareId, Long path) {
-        Share share = shareMapper.getShareById(shareId);
+        // 获取分享信息
+        Share share = cacheService.getShareInfo(shareId);
         if (share == null){
+            share = shareMapper.getShareById(shareId);
+            if (share == null){
+                cacheService.saveNullShareInfo(shareId);
+                return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+                }
+            cacheService.saveShareInfo(share);
+        }
+        if (share.getUid() == null || share.getExpire().isBefore(LocalDateTime.now())){
             return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
         }
         Result<List<FileInfo>> pathResult = fileServiceClient.getPath(path, share.getUid());
@@ -297,8 +369,16 @@ public class ShareServiceImpl implements ShareService {
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
         // 保存share中的fids等文件到我的云盘
-        Share share = shareMapper.getShareById(shareId);
+        Share share = cacheService.getShareInfo(shareId);
         if (share == null){
+            share = shareMapper.getShareById(shareId);
+            if (share == null){
+                cacheService.saveNullShareInfo(shareId);
+                return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+            }
+            cacheService.saveShareInfo(share);
+        }
+        if (share.getUid() == null || share.getExpire().isBefore(LocalDateTime.now())){
             return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
         }
         // 获取分享目录的路径
@@ -311,12 +391,13 @@ public class ShareServiceImpl implements ShareService {
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
         // 判断分享目录是否在分享列表中
-        List<FileInfo> isShareList = data.stream().filter(f -> share.getFids().contains(f.getId())).toList();
+        Share finalShare = share;
+        List<FileInfo> isShareList = data.stream().filter(f -> finalShare.getFids().contains(f.getId())).toList();
         if (isShareList.size() == 0){
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
         // 把share.getUid用户的分享目录下的fids文件保存到我的云盘path目录下
-        Result saveResult = fileServiceClient.saveFileToCloud(new SaveShare(fids, share.getUid(), path, userId));
+        Result saveResult = fileServiceClient.saveFileToCloud(new SaveShare(fids, finalShare.getUid(), path, userId));
         if (saveResult.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             return Result.error(saveResult.getMsg());
         }

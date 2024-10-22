@@ -22,4 +22,7 @@ public interface ShareMapper {
     void deleteByExpire();
 
     List<Share> getShareByIdBatch(@Param("userId") Long userId, @Param("ids") List<Long> ids);
+
+    @Select("SELECT * FROM share WHERE expire < NOW()")
+    List<Share> getExpiredShare();
 }
