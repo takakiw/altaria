@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +42,7 @@ public class ShareServiceImpl implements ShareService {
 
     @Autowired
     private FileServiceClient fileServiceClient;
+
 
     @Autowired
     private MinioService minioService;
@@ -84,6 +86,8 @@ public class ShareServiceImpl implements ShareService {
         }
         int insert = shareMapper.insert(dbShare);
         if (insert > 0) {
+            dbShare.setVisit(0L);
+            dbShare.setCreateTime(LocalDateTime.now());
             return Result.success(dbShare);
         }
         return Result.error(StatusCodeEnum.CREATE_SHARE_LINK_ERROR);
@@ -297,20 +301,8 @@ public class ShareServiceImpl implements ShareService {
         if (share == null){
             return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
         }
-        // 获取分享的文件信息
-        Result<List<FileInfo>> result = fileServiceClient.getFileInfos(fids, share.getUid());
-        if (result.getCode() != StatusCodeEnum.SUCCESS.getCode()){
-            return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
-        }
-        List<FileInfo> fileInfos = result.getData();
-        // 获取pid并去重
-        List<Long> longs = fileInfos.stream().map(FileInfo::getPid).distinct().toList();
-        if (longs.size() > 1){
-            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-        }
-        // 判断pid是否为分享目录
         // 获取分享目录的路径
-        Result<List<FileInfo>> resultPath = fileServiceClient.getPath(longs.get(0), userId);
+        Result<List<FileInfo>> resultPath = fileServiceClient.getPath(fids.get(0), share.getUid());
         if (resultPath.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             return Result.error(StatusCodeEnum.ERROR);
         }
@@ -326,7 +318,7 @@ public class ShareServiceImpl implements ShareService {
         // 把share.getUid用户的分享目录下的fids文件保存到我的云盘path目录下
         Result saveResult = fileServiceClient.saveFileToCloud(new SaveShare(fids, share.getUid(), path, userId));
         if (saveResult.getCode() != StatusCodeEnum.SUCCESS.getCode()){
-            return Result.error(StatusCodeEnum.ERROR);
+            return Result.error(saveResult.getMsg());
         }
         return Result.success();
     }

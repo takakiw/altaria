@@ -75,6 +75,15 @@
         </set>
         where md5 = #{md5}
     </update>
+    <update id="updatePidAndFileNameBatch" parameterType="java.util.List">
+        <foreach collection="files" item="fileItem" separator=";" close="" open="">
+            update file
+            set pid = #{fileItem.pid},
+            file_name = #{fileItem.fileName},
+            update_time = #{fileItem.updateTime}
+            where id = #{fileItem.id} and uid = #{uid}
+        </foreach>
+    </update>
 
     <delete id="deleteBatch">
         delete from file where uid = #{uid} and id in

@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -14,19 +16,20 @@ public class ShareCacheService {
     private static final long SHARE_EXPIRE_TIME = 60 * 60 * 24 * 2; // 2 days
     private static final long NULL_SHARE_EXPIRE_TIME = 60 * 5;
     @Autowired
-    private RedisTemplate<String, Object> redisTemmplate;
-
-    public void saveShareInfo(Share share) {
-        redisTemmplate.opsForValue().set(SHARE_PREFIX + share.getId(), share, SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
-    }
+    private RedisTemplate<String, Object> redisTemplate;
 
     public Share getShareInfo(Long shareId) {
-        return (Share) redisTemmplate.opsForValue().get(SHARE_PREFIX + shareId);
+        return (Share) redisTemplate.opsForValue().get(SHARE_PREFIX + shareId);
     }
 
     public void saveNullShareInfo(Long shareId) {
         Share share = new Share();
         share.setName("null");
-        redisTemmplate.opsForValue().set(SHARE_PREFIX + shareId, share, NULL_SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(SHARE_PREFIX + shareId, share, NULL_SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
+    }
+
+
+    public void saveShareInfo(Share shareInfo) {
+        redisTemplate.opsForValue().set(SHARE_PREFIX + shareInfo.getId(), shareInfo, SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
 }

@@ -20,4 +20,6 @@ public interface ShareMapper {
 
     @Delete("DELETE FROM share WHERE expire < NOW()")
     void deleteByExpire();
+
+    List<Share> getShareByIdBatch(@Param("userId") Long userId, @Param("ids") List<Long> ids);
 }

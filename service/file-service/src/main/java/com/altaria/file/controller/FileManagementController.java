@@ -5,6 +5,7 @@ import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.common.pojos.file.entity.MoveFile;
 import com.altaria.common.pojos.file.entity.SaveShare;
 import com.altaria.file.service.FileManagementService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -117,9 +118,9 @@ public class FileManagementController {
      * @return
      */
     @PutMapping("/mvfile")
-    public Result moveFile(@RequestBody FileInfo fileInfo,
+    public Result moveFile(@RequestBody MoveFile moveFile,
                            @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
-        return fileManagementService.moveFile(fileInfo, uid);
+        return fileManagementService.moveFile(moveFile, uid);
     }
 
     /**

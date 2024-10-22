@@ -5,6 +5,7 @@ import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
+import com.altaria.common.pojos.file.entity.SaveShare;
 import com.altaria.common.pojos.file.vo.FileInfoVO;
 import com.altaria.common.pojos.share.entity.Share;
 import com.altaria.common.pojos.share.vo.ShareVO;
@@ -51,12 +52,11 @@ public class ShareController {
     }
 
     //  保存到我的云盘
-    @PostMapping("/save/{shareId}/fids")
+    @PostMapping("/save/{shareId}")
     public Result saveToMyCloud(@PathVariable("shareId") Long shareId,
-                                @RequestBody List<Long> fids,
-                                @RequestHeader(UserConstants.USER_ID) Long userId,
-                                @RequestParam(value = "path") Long path){
-        return shareService.saveToMyCloud(shareId, fids, userId, path);
+                                @RequestBody SaveShare saveShare,
+                                @RequestHeader(UserConstants.USER_ID) Long userId){
+        return shareService.saveToMyCloud(shareId, saveShare.getFids(), userId, saveShare.getPath());
     }
 
     // 获取分享链接信息

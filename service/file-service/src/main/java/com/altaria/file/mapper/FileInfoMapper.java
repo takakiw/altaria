@@ -55,5 +55,7 @@ public interface FileInfoMapper {
     List<FileInfo> getRecycleFiles(Long uid);
 
 
-    int insertBatch(List<FileInfo> fileInfos);
+    int insertBatch(@Param("fileInfos") List<FileInfo> fileInfos);
+
+    int updatePidAndFileNameBatch(@Param("uid") Long uid, @Param("files") List<FileInfo> files);
 }

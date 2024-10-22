@@ -47,4 +47,11 @@
     <select id="getShareById" resultMap="shareResultMap">
         SELECT * FROM share WHERE id = #{shareId} AND expire > NOW()
     </select>
+    <select id="getShareByIdBatch" resultType="com.altaria.common.pojos.share.entity.Share">
+        SELECT * FROM share WHERE uid = #{uid} AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND expire > NOW()
+    </select>
 </mapper>

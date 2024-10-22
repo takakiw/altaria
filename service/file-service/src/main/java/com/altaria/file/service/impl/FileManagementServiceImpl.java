@@ -10,6 +10,7 @@ import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.common.pojos.file.entity.MoveFile;
 import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.file.mq.UploadMQType;
 import com.altaria.common.pojos.space.vo.SpaceVO;
@@ -90,31 +91,87 @@ public class FileManagementServiceImpl implements FileManagementService {
     }
 
     @Override
+    @GlobalTransactional
+    @Transactional
     public Result saveFileToCloud(List<Long> fids, Long shareUid, Long path, Long userId) {
         if (userId == null || fids == null || fids.isEmpty() || shareUid == null || path == null || shareUid.compareTo(userId) == 0){
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
         // 查询所有的fids对应的文件信息
         List<FileInfo> shareFileInfos = fileInfoMapper.getFileByIds(fids, shareUid, FileConstants.STATUS_USE);
-        List<FileInfo> childFiles = fileInfoMapper.getChildFiles(path, userId, FileConstants.STATUS_USE);
-        List<String> fileNames = childFiles.stream().map(FileInfo::getFileName).toList();
-        // 修改uid和pid, 和判断是否有同名文件
+        // 获取分享的文件信息
+        List<Long> longs = shareFileInfos.stream().map(FileInfo::getPid).distinct().toList();
+        if (longs.size() != 1){
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
+        // 判断空间是否足够
+        Result<SpaceVO> spaceVOResult = spaceServiceClient.space(userId);
+        if (spaceVOResult.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+            return Result.error(StatusCodeEnum.ERROR);
+        }
+        SpaceVO spaceVO = spaceVOResult.getData();
+        long size = shareFileInfos.stream().map(FileInfo::getSize).reduce(0L, Long::sum);
+        if (size + spaceVO.getUseSpace() > spaceVO.getTotalSpace()){
+            return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
+        }
+        // 复制文件信息
+        List<String> fileNames = null;
+        if (cacheService.ParentKeyCodeExists(userId, path)){
+            fileNames = cacheService.getChildrenAllName(userId, path);
+        }else{
+            List<FileInfo> childFiles = fileInfoMapper.getChildFiles(path, userId, FileConstants.STATUS_USE);
+            fileNames = childFiles.stream().map(FileInfo::getFileName).toList();
+        }
+        if (fileNames == null || fileNames.isEmpty()){
+            return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
+        }
+        // 修改id, uid, pid, 和判断是否有同名文件
         for (FileInfo shareFileInfo : shareFileInfos) {
             if (fileNames.contains(shareFileInfo.getFileName())) {
                 shareFileInfo.setFileName(shareFileInfo.getFileName() + "("+ RandomUtil.randomString(2) +")");
             }
-            shareFileInfo.setUid(userId);
-            shareFileInfo.setPid(path);
-            shareFileInfo.setCreateTime(LocalDateTime.now());
-            shareFileInfo.setUpdateTime(LocalDateTime.now());
         }
         // 批量插入文件信息
-        int insert = fileInfoMapper.insertBatch(shareFileInfos);
+        List<FileInfo> dbFileInfos = new ArrayList<>();
+        // 递归查找所有的子文件
+        Stack<FileInfo> stk = new Stack<>();
+        Stack<Long> stkPid = new Stack<>();
+        shareFileInfos.forEach(f -> {
+            stk.push(f);
+            stkPid.push(path);
+        });
+        while (!stk.isEmpty()){
+            FileInfo pop = stk.pop();
+            Long pidPop = stkPid.pop();
+            dbFileInfos.add(pop);
+            long newId = IdUtil.getSnowflake().nextId();
+            List<FileInfo> children = null;
+            if (pop.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
+                if (cacheService.ParentKeyCodeExists(shareUid, pop.getId())){
+                    children = cacheService.getChildrenOrderUpdateTime(shareUid, pop.getId());
+                }else {
+                    children = fileInfoMapper.getChildFiles(pop.getId(), shareUid, FileConstants.STATUS_USE);
+                }
+            }
+            if (children != null && !children.isEmpty()){
+                children.forEach(c -> {
+                    stk.push(c);
+                    stkPid.push(newId);
+                });
+            }
+            pop.setId(newId);
+            pop.setUid(userId);
+            pop.setPid(pidPop);
+        }
+        // 批量插入文件信息
+        int insert = fileInfoMapper.insertBatch(dbFileInfos);
         if (insert > 0) {
             cacheService.saveFileBatch(shareFileInfos);
             for (FileInfo shareFileInfo : shareFileInfos){
                 cacheService.addChildren(userId, path, shareFileInfo);
             }
+            spaceServiceClient.updateSpace(userId, new Space(userId, size));
+            pathAddSize(userId, path, size);
             return Result.success();
         }
         return Result.error(StatusCodeEnum.ERROR);
@@ -186,36 +243,40 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result moveFile(FileInfo fileInfo, Long uid) {
-        if (fileInfo.getId() == null || uid == null || fileInfo.getPid() == null) {
+    public Result moveFile(MoveFile move, Long uid) {
+        // 参数判断
+        if ( move== null || uid == null || move.getPid() == null || move.getOldPid() == null || move.getIds() == null || move.getIds().isEmpty()){
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
-        FileInfo file = cacheService.getFile(uid, fileInfo.getId());
-        if (file == null){
-            file = fileInfoMapper.getFileById(fileInfo.getId(), uid);
-            if (file == null){
-                cacheService.saveNullFile(uid, fileInfo.getId());
-                return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
-            }
-            cacheService.saveFile(file);
+        // 获取数据库中的文件信息
+        List<FileInfo> files = null;
+        if (cacheService.ParentKeyCodeExists(uid, move.getOldPid())){
+            files = cacheService.getChildrenOrderUpdateTime(uid, move.getOldPid()).stream().filter(f -> move.getIds().contains(f.getId())).toList();
+        }else{
+            files = fileInfoMapper.getFileByIds(move.getIds(), uid, FileConstants.STATUS_USE);
         }
-        if (file.getId() == null){
+        if (files == null || files.isEmpty()){
             return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
-        if(file.getPid().compareTo(fileInfo.getPid()) == 0){
+        // 判断pid是否唯一
+        List<Long> flag = files.stream().map(FileInfo::getPid).distinct().toList();
+        if (flag.size() != 1 || flag.get(0).compareTo(move.getOldPid()) != 0){
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
+        // 不需要移动
+        if (move.getOldPid().compareTo(move.getPid()) == 0){
             return Result.success("文件已在目标目录");
         }
+        // 获取真实的id
+        List<Long> realIds = files.stream().map(FileInfo::getId).toList();
+        // 判断pid是否存在
         // 非根目录
-        if (fileInfo.getPid().compareTo(FileConstants.ROOT_DIR_ID)!= 0) {
-            // 目标目录不能是自己的子目录
-            if(!checkPath(fileInfo.getPid(), uid, file.getId())){
-                return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-            }
-            FileInfo parentFile = cacheService.getFile(uid, fileInfo.getPid());
+        if (move.getPid().compareTo(FileConstants.ROOT_DIR_ID)!= 0) {
+            FileInfo parentFile = cacheService.getFile(uid, move.getPid());
             if (parentFile == null){
-                parentFile = fileInfoMapper.getFileById(fileInfo.getPid(), uid);
+                parentFile = fileInfoMapper.getFileById(move.getPid(), uid);
                 if (parentFile == null){
-                    cacheService.saveNullFile(uid, fileInfo.getPid());
+                    cacheService.saveNullFile(uid, move.getPid());
                     return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
                 }
                 cacheService.saveFile(parentFile);
@@ -223,37 +284,46 @@ public class FileManagementServiceImpl implements FileManagementService {
             if (parentFile.getId() == null || parentFile.getType().compareTo(FileType.DIRECTORY.getType()) != 0){
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
+            // 目标目录不能是自己的子目录
+            if(!checkPath(move.getPid(), uid, realIds)){
+                return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+            }
         }
-        // 查询是否存在同名文件
-        if (cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getPid())){
-            if (cacheService.getChildByFileName(fileInfo.getUid(), fileInfo.getPid(), file.getFileName())){
-                file.setFileName(fileInfo.getFileName() + "("+ RandomUtil.randomString(2) +")");
+        // 查询是否存在同名文件,并修改文件名写入数据库
+        if (cacheService.ParentKeyCodeExists(uid, move.getPid())){ // 缓存中获取
+            for (FileInfo file : files) {
+                if (cacheService.getChildByFileName(uid, move.getPid(), file.getFileName())){
+                    file.setFileName(file.getFileName() + "("+ RandomUtil.randomString(2) +")");
+                }
+                file.setPid(move.getPid());
+                file.setUpdateTime(LocalDateTime.now());
             }
         }else {
-            FileInfo fileChildName = fileInfoMapper.getFileChildName(fileInfo.getPid(), uid, file.getFileName());
-            if (fileChildName != null){
-                file.setFileName(fileInfo.getFileName() + "("+ RandomUtil.randomString(2) +")");
-                cacheService.saveFile(fileChildName);
+            // 数据库中获取pid下的所有fileName
+            List<String> fileNames = fileInfoMapper.getChildFiles(move.getPid(), uid, FileConstants.STATUS_USE)
+                    .stream().map(FileInfo::getFileName).toList();
+            for (FileInfo file : files) {
+                if (fileNames.contains(file.getFileName())){
+                    file.setFileName(file.getFileName() + "("+ RandomUtil.randomString(2) +")");
+                }
+                file.setPid(move.getPid());
+                file.setUpdateTime(LocalDateTime.now());
             }
         }
-        FileInfo updateFile = new FileInfo();
-        updateFile.setId(file.getId());
-        updateFile.setFileName(file.getFileName());
-        updateFile.setPid(fileInfo.getPid());
-        updateFile.setUid(uid);
-        int update = fileInfoMapper.update(updateFile);
-        // 更新父目录大小
-        pathAddSize(uid, fileInfo.getPid(), file.getSize());
-        pathAddSize(uid, file.getPid(), -file.getSize());
-        if (update > 0) {
-            cacheService.deleteChildren(uid, file.getPid(), file.getId());
-            file.setPid(fileInfo.getPid());
-            file.setUpdateTime(LocalDateTime.now());
-            cacheService.addChildren(uid, fileInfo.getPid(), file);
-            cacheService.saveFile(file);
+        // 批量更新fileName和pid
+        int i = fileInfoMapper.updatePidAndFileNameBatch(uid, files);
+        if (i > 0){
+            long size = files.stream().mapToLong(FileInfo::getSize).sum();
+            pathAddSize(uid, move.getPid(), size);
+            pathAddSize(uid, move.getOldPid(), -size);
+            for (FileInfo file : files){
+                cacheService.deleteChildren(uid, move.getOldPid(), file.getId());
+                cacheService.addChildren(uid, file.getPid(), file);
+                cacheService.saveFile(file);
+            }
             return Result.success(StatusCodeEnum.SUCCESS);
         }
-        return Result.error(StatusCodeEnum.ERROR);
+        throw new RuntimeException("移动失败·");
     }
 
     public void pathAddSize(Long uid, Long pid, Long size){
@@ -276,12 +346,12 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
     }
 
-    private boolean checkPath(Long pid, Long uid, Long id) {
+    private boolean checkPath(Long pid, Long uid, List<Long> ids) {
         Stack<Long> stack = new Stack<>();
         stack.push(pid);
         while (!stack.isEmpty()) {
             Long currentId = stack.pop();
-            if (currentId.compareTo(id) == 0){
+            if (ids.contains(currentId)){
                 return false;
             }
             FileInfo file = cacheService.getFile(uid, currentId);

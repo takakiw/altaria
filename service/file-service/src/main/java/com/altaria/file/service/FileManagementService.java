@@ -3,6 +3,7 @@ package com.altaria.file.service;
 import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
+import com.altaria.common.pojos.file.entity.MoveFile;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,7 +13,7 @@ public interface FileManagementService {
 
     Result mkdir(Long uId, Long pid, String dirName);
 
-    Result moveFile(FileInfo fileInfo, Long uid);
+    Result moveFile(MoveFile fileInfo, Long uid);
 
     Result renameFile(FileInfo fileInfo, Long uid);
 
