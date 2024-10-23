@@ -80,7 +80,13 @@ public class ShareCacheService {
 
     public void deleteUserShare(Long userId, List<Long> realIds) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId))){
-            redisTemplate.opsForZSet().remove(USER_SHARE_PREFIX + userId, realIds);
+            redisTemplate.opsForZSet().remove(USER_SHARE_PREFIX + userId, realIds.toArray());
+        }
+    }
+
+    public void addUserShare(Long userId, Share share) {
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId))){
+            redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, share.getId(), share.getCreateTime().toEpochSecond(ZoneOffset.UTC));
         }
     }
 }

@@ -92,6 +92,7 @@ public class ShareServiceImpl implements ShareService {
             dbShare.setVisit(0L);
             dbShare.setCreateTime(LocalDateTime.now());
             cacheService.saveShareInfo(dbShare);
+            cacheService.addUserShare(userId, dbShare);
             return Result.success(dbShare);
         }
         return Result.error(StatusCodeEnum.CREATE_SHARE_LINK_ERROR);
@@ -101,7 +102,7 @@ public class ShareServiceImpl implements ShareService {
     public List<Share> getShareList(Long userId) {
         if (cacheService.KeyExists(userId)){
             List<Share> userAllShare = cacheService.getUserAllShare(userId);
-            List<Share> shares = userAllShare.stream().filter(share -> share.getExpire().isAfter(LocalDateTime.now())).toList();
+            List<Share> shares = userAllShare.stream().filter(share -> share != null && share.getUid() != null && share.getExpire().isAfter(LocalDateTime.now())).toList();
             cacheService.deleteShareBatch(userAllShare.stream().filter(share -> share.getExpire().isBefore(LocalDateTime.now())).toList());
             return shares;
         }else{
@@ -124,10 +125,14 @@ public class ShareServiceImpl implements ShareService {
             }
             cacheService.saveShareInfo(share);
         }
-        if (share.getUid() == null || share.getExpire().isBefore(LocalDateTime.now())){
-            shareMapper.deleteByIds(List.of(shareId), share.getUid());
+        if(share.getUid() == null){
+            return null;
         }
-        return shareMapper.getShareById(shareId);
+        if (share.getExpire().isBefore(LocalDateTime.now())){
+            shareMapper.deleteByIds(List.of(shareId), share.getUid());
+            return null;
+        }
+        return share;
     }
 
     @Override
@@ -138,10 +143,11 @@ public class ShareServiceImpl implements ShareService {
         // 查询数据库中是否存在这些分享
         List<Share> dbShares = shareMapper.getShareByIdBatch(userId, shareIds);
         List<Long> realIds = dbShares.stream().map(Share::getId).toList();
-        shareMapper.deleteByIds(realIds, userId);
-        if (cacheService.KeyExists(userId)) {
-            cacheService.deleteUserShare(userId, realIds);
+        if (realIds.size() == 0){
+            return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
         }
+        shareMapper.deleteByIds(realIds, userId);
+        cacheService.deleteUserShare(userId, realIds);
         cacheService.deleteShareBatch(dbShares);
         return Result.success();
     }
@@ -296,7 +302,7 @@ public class ShareServiceImpl implements ShareService {
             try {
                 Boolean aBoolean = isShareFileFuture.get();
                 if (!aBoolean){
-                    return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
+                    return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
                 }
                 Result<PageResult<FileInfo>> childrenList = childrenListFuture.get();
                 if (childrenList.getCode() != StatusCodeEnum.SUCCESS.getCode()){
