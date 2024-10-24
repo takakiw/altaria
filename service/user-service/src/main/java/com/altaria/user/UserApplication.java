@@ -7,11 +7,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 @SpringBootApplication
 @EnableAsync
 @ServletComponentScan
+@EnableScheduling
 @EnableFeignClients(defaultConfiguration = FileServiceFeignConfig.class, clients = {FileServiceClient.class})
 public class UserApplication {
     public static void main(String[] args) {

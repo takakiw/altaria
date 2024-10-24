@@ -100,8 +100,11 @@ public class ShareServiceImpl implements ShareService {
 
     @Override
     public List<Share> getShareList(Long userId) {
-        if (cacheService.KeyExists(userId)){
+        if (Boolean.TRUE.equals(cacheService.KeyExists(userId))){
             List<Share> userAllShare = cacheService.getUserAllShare(userId);
+            if (userAllShare == null || userAllShare.size() == 0){
+                return new ArrayList<>();
+            }
             List<Share> shares = userAllShare.stream().filter(share -> share != null && share.getUid() != null && share.getExpire().isAfter(LocalDateTime.now())).toList();
             cacheService.deleteShareBatch(userAllShare.stream().filter(share -> share.getExpire().isBefore(LocalDateTime.now())).toList());
             return shares;

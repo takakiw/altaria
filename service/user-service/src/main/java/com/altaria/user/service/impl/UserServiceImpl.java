@@ -138,7 +138,8 @@ public class UserServiceImpl implements UserService {
         if(!email.matches(UserConstants.EMAIL_REGEX)){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        if (cacheService.getEmailCodeTTL(UserConstants.TYPE_UPDATE_PWD, email) - 60 > 0){
+        Long emailCodeTTL = cacheService.getEmailCodeTTL(UserConstants.TYPE_UPDATE_PWD, email);
+        if (emailCodeTTL != null && emailCodeTTL.intValue() - 60 > 0){
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
         threadPoolTaskExecutor.execute(() -> {

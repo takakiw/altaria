@@ -70,7 +70,7 @@ public class ShareCacheService {
         saveShareBatch(shareList);
     }
 
-    public boolean KeyExists(Long userId) {
+    public Boolean KeyExists(Long userId) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId));
     }
 

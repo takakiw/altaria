@@ -19,6 +19,7 @@ import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.file.service.FileManagementService;
 import com.altaria.minio.service.MinioService;
+import com.altaria.redis.CheckConnectTask;
 import com.github.pagehelper.Page;
 import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.servlet.http.HttpServletResponse;
@@ -62,6 +63,9 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     @Autowired
     private SpaceServiceClient spaceServiceClient;
+
+    @Autowired
+    private CheckConnectTask checkConnectTask;
 
 
     @Value("${temp.file.path:/temp/file/}")
@@ -116,7 +120,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         // 复制文件信息
         List<String> fileNames = null;
-        if (cacheService.ParentKeyCodeExists(userId, path)){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(userId, path))){
             fileNames = cacheService.getChildrenAllName(userId, path);
         }else{
             List<FileInfo> childFiles = fileInfoMapper.getChildFiles(path, userId, FileConstants.STATUS_USE);
@@ -147,7 +151,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             long newId = IdUtil.getSnowflake().nextId();
             List<FileInfo> children = null;
             if (pop.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-                if (cacheService.ParentKeyCodeExists(shareUid, pop.getId())){
+                if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(shareUid, pop.getId()))){
                     children = cacheService.getChildrenOrderUpdateTime(shareUid, pop.getId());
                 }else {
                     children = fileInfoMapper.getChildFiles(pop.getId(), shareUid, FileConstants.STATUS_USE);
@@ -200,15 +204,18 @@ public class FileManagementServiceImpl implements FileManagementService {
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
+        if (!checkConnectTask.isRedisConnected()){
+            return Result.error();
+        }
         RLock lock = redissonClient.getLock("fileLock" + pid + ":" + uid + ":" + dirName);
         try {
             boolean b = lock.tryLock(5, 5, TimeUnit.SECONDS);
             if (!b){
                 return Result.error(StatusCodeEnum.ERROR);
             }
-            if (cacheService.ParentKeyCodeExists(uid, pid)){
+            if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, pid))){
                 Boolean isName = cacheService.getChildByFileName(uid, pid, dirName);
-                if (isName){
+                if (Boolean.TRUE.equals(isName)){
                     return Result.error(StatusCodeEnum.FILE_ALREADY_EXISTS);
                 }
             }else {
@@ -250,7 +257,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         // 获取数据库中的文件信息
         List<FileInfo> files = null;
-        if (cacheService.ParentKeyCodeExists(uid, move.getOldPid())){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, move.getOldPid()))){
             files = cacheService.getChildrenOrderUpdateTime(uid, move.getOldPid()).stream().filter(f -> move.getIds().contains(f.getId())).toList();
         }else{
             files = fileInfoMapper.getFileByIds(move.getIds(), uid, FileConstants.STATUS_USE);
@@ -290,9 +297,9 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
         }
         // 查询是否存在同名文件,并修改文件名写入数据库
-        if (cacheService.ParentKeyCodeExists(uid, move.getPid())){ // 缓存中获取
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, move.getPid()))){ // 缓存中获取
             for (FileInfo file : files) {
-                if (cacheService.getChildByFileName(uid, move.getPid(), file.getFileName())){
+                if (Boolean.TRUE.equals(cacheService.getChildByFileName(uid, move.getPid(), file.getFileName()))){
                     file.setFileName(file.getFileName() + "("+ RandomUtil.randomString(2) +")");
                 }
                 file.setPid(move.getPid());
@@ -393,8 +400,8 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (file.getId() == null){
             return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
-        if (cacheService.ParentKeyCodeExists(file.getUid(), file.getPid())){
-            if (cacheService.getChildByFileName(file.getUid(), file.getPid(), fileInfo.getFileName())){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(file.getUid(), file.getPid()))){
+            if (Boolean.TRUE.equals(cacheService.getChildByFileName(file.getUid(), file.getPid(), fileInfo.getFileName()))){
                 return Result.error(StatusCodeEnum.FILE_ALREADY_EXISTS);
             }
         }else {
@@ -439,7 +446,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
-        if (cacheService.ParentKeyCodeExists(uid, id)){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, id))){
             List<FileInfo> targetFiles = new ArrayList<>();
             switch (order) {
                 case 0 -> targetFiles = cacheService.getChildrenOrderUpdateTimeReverse(uid, id);
@@ -544,7 +551,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
         List<FileInfo> recycleFiles = null;
-        if (cacheService.existsRecycleChildren(uid)){
+        if (Boolean.TRUE.equals(cacheService.existsRecycleChildren(uid))){
             recycleFiles = cacheService.getRecycleFiles(uid);
         }else {
             recycleFiles = fileInfoMapper.getRecycleFiles(uid);
@@ -619,7 +626,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             FileInfo fileInfo = stk.pop();
             set.add(fileInfo.getId());
             if (fileInfo.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-                if (cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId())){
+                if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId()))){
                     List<FileInfo> children = cacheService.getChildrenOrderUpdateTime(uid, fileInfo.getId());
                     List<Long> longs = children.stream().map(FileInfo::getId).toList();
                     set.addAll(longs);
@@ -686,7 +693,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             set.add(fileInfo.getId());
             if (fileInfo.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-                if (cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId())){
+                if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId()))){
                     List<FileInfo> children = cacheService.getChildrenOrderUpdateTime(uid, fileInfo.getId());
                     List<Long> longs = children.stream().map(FileInfo::getId).toList();
                     set.addAll(longs);
@@ -755,6 +762,9 @@ public class FileManagementServiceImpl implements FileManagementService {
         long size = file.getSize();
         if (size <= 0){
             return Result.error(StatusCodeEnum.FILE_UPLOAD_FAILED);
+        }
+        if (!checkConnectTask.isRedisConnected()){
+            return Result.error();
         }
         RLock lock = redissonClient.getLock("upload_" + uid + ":" + pid + ":" + fid + ":" + index);
         try{
@@ -855,11 +865,16 @@ public class FileManagementServiceImpl implements FileManagementService {
             cacheService.deleteUploadFile(uid, fid);
             log.error("文件上传失败");
             throw new RuntimeException(e.getMessage()); // 抛出异常，确保事务回滚
+        }finally {
+            if (lock.isLocked()) lock.unlock();
         }
     }
 
 
     private void saveFile(FileInfo saveFile){
+        if (!checkConnectTask.isRedisConnected()){
+            throw new RuntimeException("系统异常");
+        }
         RLock lock = redissonClient.getLock("fileInfoLock" + saveFile.getUid() + ":" + saveFile.getPid() + ":" + saveFile.getFileName());
         boolean b = false;
         try {
@@ -868,8 +883,8 @@ public class FileManagementServiceImpl implements FileManagementService {
                 throw new Exception("文件锁失败");
             }
             // 查询是否存在同名文件
-            if (cacheService.ParentKeyCodeExists(saveFile.getUid(), saveFile.getPid())){
-                if (cacheService.getChildByFileName(saveFile.getUid(), saveFile.getPid(), saveFile.getFileName())){
+            if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(saveFile.getUid(), saveFile.getPid()))){
+                if (Boolean.TRUE.equals(cacheService.getChildByFileName(saveFile.getUid(), saveFile.getPid(), saveFile.getFileName()))){
                     saveFile.setFileName(saveFile.getFileName() + "("+ RandomUtil.randomString(2) +")");
                 }
             }else {
@@ -927,8 +942,8 @@ public class FileManagementServiceImpl implements FileManagementService {
                 }
             }
             // 判断父目录下是否存在同名文件
-            if (cacheService.ParentKeyCodeExists(uid, fileInfo.getPid())){
-                if(cacheService.getChildByFileName(uid, fileInfo.getPid(), fileInfo.getFileName())){
+            if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, fileInfo.getPid()))){
+                if(Boolean.TRUE.equals(cacheService.getChildByFileName(uid, fileInfo.getPid(), fileInfo.getFileName()))){
                     fileInfo.setFileName(fileInfo.getFileName() + "("+ RandomUtil.randomString(2) +")");
 
                 }

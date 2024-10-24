@@ -43,9 +43,9 @@ public class UserCacheService {
      * @param email 用户邮箱
      * @return 剩余时间（秒）
      */
-    public int getEmailCodeTTL(String type, String email) {
+    public Long getEmailCodeTTL(String type, String email) {
         Long expire = redisTemplate.getExpire(EMAIL_CODE_PREFIX + type + ":" + email, TimeUnit.SECONDS);
-        return expire != null ? expire.intValue() : 0;
+        return expire;
     }
 
     /**

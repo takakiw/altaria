@@ -92,18 +92,6 @@ public class FileCacheService {
         return BeanUtil.copyProperties(data, FileInfo.class);
     }
 
-    public List<FileInfo> getFiles(Long uid, List<Long> fids){
-        List<FileInfo> fileInfoList = new ArrayList<>();
-        for (Long fid : fids){
-            Map<Object, Object> data = redisTemplate.opsForHash().entries(FILE_PREFIX + uid + ":" + fid);
-            if (data == null || data.isEmpty()){
-                continue;
-            }
-            fileInfoList.add(BeanUtil.copyProperties(data, FileInfo.class));
-        }
-        return fileInfoList;
-    }
-
 
     public void updateFileName(Long uid, Long pid, Long fid, String fileName, String oldName) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PREFIX + uid + ":" + fid))){
@@ -247,7 +235,7 @@ public class FileCacheService {
 
 
 
-    public boolean ParentKeyCodeExists(Long uid, Long pid) {
+    public Boolean ParentKeyCodeExists(Long uid, Long pid) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid));
     }
 
@@ -339,7 +327,7 @@ public class FileCacheService {
         return fileInfos;
     }
 
-    public boolean existsRecycleChildren(Long uid) {
+    public Boolean existsRecycleChildren(Long uid) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(FILE_RECYCLE_PARENT_PREFIX + uid));
     }
 
