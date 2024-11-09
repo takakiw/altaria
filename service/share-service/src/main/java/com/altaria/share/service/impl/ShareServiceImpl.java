@@ -200,6 +200,7 @@ public class ShareServiceImpl implements ShareService {
         }
         // 增加下载次数
         shareMapper.incrementVisit(shareId);
+        cacheService.incrementVisit(shareId);
         // 下载文件
         return fileServiceClient.downloadSign(fileInfo.getId(), shareInfo.getUid());
     }

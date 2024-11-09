@@ -84,6 +84,8 @@ public enum FileType {
         return type; // 返回指定的类型代码
     }
 
+
+    // 根据content-type获取对应的FileType
     public static FileType getFileType(String contentType) {
         for (FileType fileType : FileType.values()) {
             if (fileType.matches(contentType)) {

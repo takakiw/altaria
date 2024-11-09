@@ -98,4 +98,13 @@ public class ShareCacheService {
         redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, NULL_USER_SHARE_VALUE, System.currentTimeMillis());
         redisTemplate.expire(USER_SHARE_PREFIX + userId, NULL_USER_SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
+
+    @Async
+    public void incrementVisit(Long shareId) {
+        Share share = getShareInfo(shareId);
+        if (share != null) {
+            share.setVisit(share.getVisit() + 1);
+            redisTemplate.opsForValue().set(SHARE_PREFIX + shareId, share, SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
+        }
+    }
 }

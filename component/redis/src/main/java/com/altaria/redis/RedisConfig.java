@@ -11,9 +11,6 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 
 import lombok.Data;
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -122,7 +119,7 @@ public class RedisConfig {
     }
 
     @Bean
-    public CheckConnectTask checkConnectTask() {
-        return new CheckConnectTask();
+    public CheckConnection checkConnectTask() {
+        return new CheckConnection();
     }
 }
