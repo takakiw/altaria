@@ -15,10 +15,13 @@ import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
 @SpringBootApplication(exclude = {SeataFeignClientAutoConfiguration.class}) // 排除seata的feign配置，使用自定义的配置开启熔断降级
 @EnableAsync
 @ServletComponentScan
 @EnableFeignClients(defaultConfiguration = SpaceServiceFeignConfig.class, clients = {SpaceServiceClient.class})
+@EnableScheduling
 public class FileApplication {
     public static void main(String[] args) {
         SpringApplication.run(FileApplication.class, args);

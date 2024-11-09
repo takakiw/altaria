@@ -1,8 +1,10 @@
 package com.altaria.file.listener;
 
+import com.alibaba.fastjson.JSONObject;
 import com.altaria.common.constants.FileConstants;
 import com.altaria.common.constants.MinioConstants;
 import com.altaria.common.enums.FileType;
+import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.common.pojos.file.mq.UploadMQType;
 import com.altaria.common.utils.FfmpegUtil;
 import com.altaria.file.cache.FileCacheService;
@@ -47,6 +49,18 @@ public class FileStoreHandle {
         minioService.deleteFile(list);
     }
 
+    @RabbitListener(queues = "recycle-delete-queue")
+    public void deleteRecycleFile(String message) {
+        String[] split = message.split("-");
+        Long uid = Long.parseLong(split[0]);
+        if (split.length == 1){
+            return;
+        }
+        List<Long> longs = Arrays.stream(split[1].split(",")).map(Long::parseLong).toList();
+        fileInfoMapper.deleteBatch(longs, uid);
+        cacheService.deleteRecycleFiles(uid, longs);
+    }
+
 
     @RabbitListener(queues = "upload-queue")
     public void uploadFile(UploadMQType message) {
@@ -62,6 +76,28 @@ public class FileStoreHandle {
     }
 
     private void transferFile(Long uid, long dbId, Long fid, String contentType, String suffix, String tempPath, String md5) {
+        // 判断MD5是否重复
+        List<FileInfo> fileByMd5 = fileInfoMapper.getFileByMd5(md5);
+        if (fileByMd5!= null && fileByMd5.size() > 0){
+            log.info("文件MD5重复, 文件id: {},用户id: {}", dbId, uid);
+            // 删除临时文件， 直接使用已有文件
+            File sourceFile = new File(tempPath + fid);
+            if (sourceFile.exists()){
+                try {
+                    FileUtils.deleteDirectory(sourceFile);
+                    log.info("删除临时文件成功 {}", sourceFile.getAbsolutePath());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            // 使用已有文件更新数据库
+            FileInfo fileInfo = fileByMd5.get(0);
+            fileInfoMapper.updateURLAndCoverByMd5(fileInfo.getUrl(), fileInfo.getCover(), fileInfo.getMd5(), FileConstants.TRANSFORMED_END);
+            // 更新缓存中文件信息，包括url和封面，以及转码状态
+            cacheService.updateFileCoverAndUrl(uid, dbId,  fileInfo.getCover(),fileInfo.getUrl());
+            cacheService.updateFileTransformed(uid, dbId, FileConstants.TRANSFORMED_END);
+            return;
+        }
         File sourceDir = new File(tempPath + fid);
         File[] files = sourceDir.listFiles();
         if (files == null || files.length == 0){

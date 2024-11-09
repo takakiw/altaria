@@ -55,7 +55,8 @@ public class FileManagementController {
         return fileManagementService.uploadImage(file);
     }
 
-    @PostMapping("/saveShare")
+    // 通过接口调用保存分享文件，内部使用FeignClient进行调用
+    @PostMapping("/file/saveShare")
     public Result saveFileToCloud(@RequestBody SaveShare saveShare){
         String requestPathService = request.getHeader(FeignConstants.REQUEST_ID_HEADER);
         // 判断是否从FeignClient调用
@@ -82,10 +83,24 @@ public class FileManagementController {
                          @NotNull Long fid,
                          @NotNull Long pid,
                          @NotNull MultipartFile file,
+                         @NotNull String fileName,
+                         @NotNull String type,
                          @NotNull String md5,
                          @NotNull Integer index,
                          @NotNull Integer total) {
-        return fileManagementService.upload(uid,fid, pid, file, md5, index, total);
+        return fileManagementService.upload(uid,fid, pid, file, fileName, type, md5, index, total);
+    }
+
+    /**
+     * 获取下载签名
+     * @param id
+     * @param uid
+     * @return
+     */
+    @GetMapping("/download/sign/{id}")
+    public Result<String> downloadSign(@PathVariable("id") Long id,
+                                       @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
+        return fileManagementService.downloadSign(id, uid);
     }
 
     /**
@@ -97,8 +112,10 @@ public class FileManagementController {
     @GetMapping("/download/{id}")
     public void download(HttpServletResponse response,
                          @PathVariable("id") Long id,
-                         @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
-        fileManagementService.download(response, id, uid);
+                         @RequestParam("uid") Long uid,
+                         @RequestParam("expire") Long expire,
+                         @RequestParam("sign") String sign) {
+        fileManagementService.download(response, id, uid, expire, sign);
     }
 
     /**
@@ -114,7 +131,7 @@ public class FileManagementController {
 
     /**
      * 移动文件
-     * @param fileInfo
+     * @param moveFile
      * @return
      */
     @PutMapping("/mvfile")
@@ -144,14 +161,16 @@ public class FileManagementController {
      * @param uid
      * @return PageResult<FileInfo>
      */
-    @GetMapping("/list/{id}")
-    public Result<PageResult<FileInfo>> getChildrenList(@PathVariable("id") Long id,
+    @GetMapping("/list")
+    public Result<PageResult<FileInfo>> getChildrenList(
+                                            @RequestParam(value = "id", required = false) Long id,
                                             @RequestParam(value = "type", required = false) Integer type,
                                             @RequestParam(value = "fileName" , required = false) String fileName,
                                             @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
                                             @RequestParam(value = "order", required = false, defaultValue = "0") Integer order) {
         return fileManagementService.getPagedFileList(id, uid, type,fileName, order);
     }
+
 
     /**
      * 获取文件路径
@@ -160,7 +179,7 @@ public class FileManagementController {
      * @return Result
      */
     @GetMapping("/path")
-    public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = true) Long path,
+    public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = false) Long path,
                           @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.getPath(path, uid);
     }
@@ -211,5 +230,17 @@ public class FileManagementController {
     @GetMapping("/recycle/list")
     public Result<PageResult<FileInfo>> recycleList(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid){
         return fileManagementService.getRecycleFileList(uid);
+    }
+
+    /**
+     * 删除取消上传的本地临时文件
+     * @param id
+     * @param uid
+     * @return
+     */
+    @DeleteMapping("/delUpload/{id}")
+    public Result delUpload(@PathVariable("id") Long id,
+                            @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
+        return fileManagementService.delUpload(id, uid);
     }
 }
