@@ -3,6 +3,7 @@ package com.altaria.share.aspect;
 import com.altaria.common.constants.ShareConstants;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.share.entity.Share;
+import com.altaria.config.exception.BaseException;
 import com.altaria.share.cache.ShareCacheService;
 import com.altaria.share.mapper.ShareMapper;
 import jakarta.servlet.http.Cookie;
@@ -50,12 +51,12 @@ public class CheckAspect {
                 shareInfo = shareMapper.getShareById(shareId);
                 if (shareInfo == null){
                     cacheService.saveNullShareInfo(shareId);
-                    throw new IllegalArgumentException("验证失败");
+                    throw new BaseException("验证失败");
                 }
                 cacheService.saveShareInfo(shareInfo);
             }
             if (shareInfo.getUid() == null) {
-                throw new IllegalArgumentException("验证失败");
+                throw new BaseException("验证失败");
             }
             if (uid != null && shareInfo.getUid().compareTo(Long.parseLong(uid)) == 0){
                 // 验证通过，放行
@@ -66,12 +67,12 @@ public class CheckAspect {
                 // 从cookie中获取验证码
                 Cookie[] cookies = request.getCookies();
                 if (cookies == null || cookies.length == 0) {
-                    throw new IllegalArgumentException("验证失败");
+                    throw new BaseException("验证失败");
                 }
                 List<Cookie> cookieList = Arrays.stream(cookies)
                         .filter(cookie -> cookie.getName().equals(ShareConstants.COOKIE_NAME + shareId) && cookie.getValue().equals(dbSign)).toList();
                 if (cookieList.size() == 0){
-                    throw new IllegalArgumentException("验证失败");
+                    throw new BaseException("验证失败");
                 }
                 // 验证通过，放行
                 log.info("验证通过: "+ request.getRequestURI());
@@ -79,7 +80,7 @@ public class CheckAspect {
             }
         }catch(Exception e){
             log.warn("验证失败: "+ request.getRequestURI());
-            throw new IllegalArgumentException("验证失败");
+            throw new BaseException("验证失败");
         }
     }
 }

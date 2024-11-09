@@ -25,7 +25,7 @@ public interface FileServiceClient {
                                                @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
     @GetMapping("/file/path")
-    public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = true) Long path,
+    public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = false) Long path,
                                           @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
     @GetMapping("/file/list")
@@ -36,7 +36,7 @@ public interface FileServiceClient {
             @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
             @RequestParam(value = "order", required = false, defaultValue = "0") Integer order);
 
-    @PostMapping("/file/saveShare")
+    @PostMapping("/file/file/saveShare")
     public Result saveFileToCloud(@RequestBody SaveShare saveShare);
 
     @GetMapping("/file/download/sign/{id}")

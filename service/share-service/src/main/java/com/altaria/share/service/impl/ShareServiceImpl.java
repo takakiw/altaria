@@ -363,9 +363,6 @@ public class ShareServiceImpl implements ShareService {
         if (userId == null || fids == null || fids.size() == 0 || shareId == null){
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
         }
-        if (userId.compareTo(shareId) == 0){
-            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-        }
         // 保存share中的fids等文件到我的云盘
         Share share = cacheService.getShareInfo(shareId);
         if (share == null){
@@ -379,10 +376,28 @@ public class ShareServiceImpl implements ShareService {
         if (share.getUid() == null || share.getExpire().isBefore(LocalDateTime.now())){
             return Result.error(StatusCodeEnum.SHARE_NOT_EXISTS);
         }
+        // 不能保存自己分享的文件
+        if(share.getUid().compareTo(userId) == 0){
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
+        // 判断分享类型
         if (share.getType() != ShareConstants.TYPE_FILE){
-            return Result.error(StatusCodeEnum.ONLY_FILE_SAVED); // 暂时只支持文件分享
+            return Result.error(StatusCodeEnum.ONLY_FILE_SAVED); // 暂时只支持文件分享保存
         }
         // 获取分享目录的路径
+        Result<List<FileInfo>> fileInfos = fileServiceClient.getFileInfos(fids, share.getUid());
+        if (fileInfos.getCode() != StatusCodeEnum.SUCCESS.getCode()){
+            return Result.error(StatusCodeEnum.ERROR);
+        }
+        List<FileInfo> infoList = fileInfos.getData();
+        if (infoList == null || infoList.size() == 0){
+            return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
+        }
+        // 获取父目录并去重
+        int size = infoList.stream().map(FileInfo::getPid).distinct().toList().size();
+        if (size != 1){
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
         Result<List<FileInfo>> resultPath = fileServiceClient.getPath(fids.get(0), share.getUid());
         if (resultPath.getCode() != StatusCodeEnum.SUCCESS.getCode()){
             return Result.error(StatusCodeEnum.ERROR);

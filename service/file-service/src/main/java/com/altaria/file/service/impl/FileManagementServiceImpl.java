@@ -16,6 +16,7 @@ import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.file.mq.UploadMQType;
 import com.altaria.common.pojos.space.vo.SpaceVO;
 import com.altaria.common.utils.SignUtil;
+import com.altaria.config.exception.BaseException;
 import com.altaria.feign.client.SpaceServiceClient;
 import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
@@ -377,7 +378,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             return Result.success(StatusCodeEnum.SUCCESS);
         }
-        throw new RuntimeException("移动失败·");
+        throw new BaseException("移动失败·");
     }
 
     public void pathAddSize(Long uid, Long pid, Long size){
@@ -876,7 +877,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                 try {
                     saveFile(fileByMd5);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new BaseException(e.getMessage());
                 }
                 cacheService.deleteUploadFile(fid);
                 log.info("秒传");
@@ -891,7 +892,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         try {
             if (usedSpace.getUseSpace() + uploadFileSize > usedSpace.getTotalSpace()) {
                 log.info("空间不足{}", uid);
-                throw new Exception("空间不足");
+                throw new BaseException("空间不足");
             }
             tempDir = new File(tempPath + fid);
             if (!tempDir.exists()) {
@@ -928,7 +929,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             cacheService.deleteUploadFile(fid);
             log.error("文件上传失败");
-            throw new RuntimeException(e.getMessage()); // 抛出异常，确保事务回滚
+            throw new BaseException(e.getMessage()); // 抛出异常，确保事务回滚
         }finally {
             if (lock.isLocked()) lock.unlock();
         }
@@ -937,14 +938,14 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     private void saveFile(FileInfo saveFile){
         if (!checkConnection.isRedisConnected()){
-            throw new RuntimeException("系统异常");
+            throw new BaseException("系统异常");
         }
         RLock lock = redissonClient.getLock("fileInfoLock" + saveFile.getUid() + ":" + saveFile.getPid() + ":" + saveFile.getFileName());
         boolean b = false;
         try {
             b = lock.tryLock(5, 5, TimeUnit.SECONDS);
             if (!b){
-                throw new Exception("文件锁失败");
+                throw new BaseException("系统繁忙，请稍后再试");
             }
             // 查询是否存在同名文件
             if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(saveFile.getUid(), saveFile.getPid()))){
@@ -966,9 +967,9 @@ public class FileManagementServiceImpl implements FileManagementService {
                 cacheService.saveFile(saveFile);
                 return;
             }
-            throw new Exception("文件上传失败");
+            throw new BaseException("文件上传失败");
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new BaseException(e.getMessage());
         }finally {
             try {
                 if (b && lock.isLocked()){
