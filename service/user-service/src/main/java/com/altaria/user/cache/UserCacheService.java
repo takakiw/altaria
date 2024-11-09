@@ -21,8 +21,9 @@ public class UserCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    public void saveEmailCode(String type, String code, String email) {
+    public Boolean saveEmailCode(String type, String code, String email) {
         redisTemplate.opsForValue().set(EMAIL_CODE_PREFIX + type + ":" + email, code, CODE_EXPIRATION_TIME, TimeUnit.SECONDS);
+        return true;
     }
 
     /**

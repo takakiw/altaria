@@ -49,7 +49,10 @@ public class LoginController {
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
         String code = RandomStringUtils.random(6, true, true);
-        cacheService.saveEmailCode(type,code, email);
+        Boolean aBoolean = cacheService.saveEmailCode(type, code, email);
+        if (!aBoolean){
+            return Result.error(StatusCodeEnum.ERROR);
+        }
         loginService.sendCode(email, type, code);
         return Result.success();
     }

@@ -1,16 +1,14 @@
 package com.altaria.space.cache;
 
-import com.altaria.redis.CheckConnectTask;
+import com.altaria.redis.CheckConnection;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,12 +18,12 @@ import java.util.List;
 public class RedisExceptionHandle {
 
     @Autowired
-    private CheckConnectTask checkConnectTask;
+    private CheckConnection checkConnection;
 
 
     @Around("execution(* com.altaria.space.cache.SpaceCacheService.*(..))")
     public Object handleRedisException(ProceedingJoinPoint joinPoint) throws Throwable {
-        if (!checkConnectTask.isRedisConnected()) {
+        if (!checkConnection.isRedisConnected()) {
             log.warn("Redis not connected, using default values");
             return getDefaultReturnValue(joinPoint.getSignature());
         }
