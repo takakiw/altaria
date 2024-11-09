@@ -35,16 +35,20 @@ public class AuthGlobalFilter implements GlobalFilter {
             try {
                 map = JWTUtil.parseJwt(token);
                 String uId = map.get(UserConstants.USER_ID).toString();
-                ServerWebExchange webExchange = exchange.mutate().request(builder -> builder.header(UserConstants.USER_ID, uId).build()).build();
+                // 将用户id设置到请求头中
+
+                String newToken = JWTUtil.generateJwt(map);
+                // 将新的token设置到响应头中
+                response.getHeaders().set("Authorization", "Bearer " + newToken);
+                response.getHeaders().add("Access-Control-Expose-Headers", "Authorization"); // 允许跨域访问Authorization头
+                ServerWebExchange webExchange = exchange.mutate().request(builder -> builder.header(UserConstants.USER_ID, uId).header("Authorization", "Bearer " + newToken).build()).build();
                 return chain.filter(webExchange);
             } catch (Exception e) {
                 // token 无效
                 return handleInvalidToken(response);
             }
         }
-        ServerWebExchange build = exchange.mutate().request(builder -> builder.header(UserConstants.USER_ID, "1")).build();
-        return chain.filter(build);
-        //return chain.filter(exchange);
+        return chain.filter(exchange);
     }
 
     private Mono<Void> handleInvalidToken(ServerHttpResponse response) {
