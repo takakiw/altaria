@@ -10,6 +10,7 @@ import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.minio.service.MinioService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
@@ -61,10 +62,16 @@ public class Lang3Test {
         Thread.sleep(10000);
     }
 
+    @Value("${temp.file.path}")
+    private String tempFilePath;
+
     @Test
     public void test3() throws Exception {
-        System.out.println("a".compareTo("b"));
-        System.out.println("a".compareTo("a"));
-        System.out.println("b".compareTo("a"));
+        System.out.println(tempFilePath);
+        File file = new File(tempFilePath);
+        File[] files = file.listFiles();
+        for (File f : files) {
+            System.out.println(f.getName());
+        }
     }
 }

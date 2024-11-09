@@ -38,3 +38,5 @@ build/
 /.logs/
 /.idea/
 /service/share-service/.logs/share-service.log
+/service/file-service/.logs/
+/service/user-service/.logs/user-service.log

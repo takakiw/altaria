@@ -2,14 +2,10 @@ package com.altaria.file.mapper;
 
 
 import com.altaria.common.annotation.AutoFill;
-import com.altaria.common.constants.FileConstants;
 import com.altaria.common.enums.OperationType;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.github.pagehelper.Page;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,8 +40,8 @@ public interface FileInfoMapper {
     List<FileInfo> getFileByMd5(@Param("md5") String md5);
 
 
-    @Update("UPDATE file SET size = size + #{size} WHERE id = #{id} AND uid = #{uid}")
-    int updateParentSize(@Param("uid") Long uid, @Param("id") Long id, @Param("size") Long size);
+    @Update("UPDATE file SET size = size + #{size}, update_time = #{updateTime} WHERE id = #{id} AND uid = #{uid}")
+    int updateParentSize(@Param("uid") Long uid, @Param("id") Long id, @Param("size") Long size, @Param("updateTime") LocalDateTime updateTime);
 
     List<FileInfo> selectOrder(@Param("uid") Long uid, @Param("pid") Long pid, @Param("type") Integer type, @Param("fileName") String fileName, @Param("order") Integer order);
 
@@ -58,4 +54,10 @@ public interface FileInfoMapper {
     int insertBatch(@Param("fileInfos") List<FileInfo> fileInfos);
 
     int updatePidAndFileNameBatch(@Param("uid") Long uid, @Param("files") List<FileInfo> files);
+
+    @Select("SELECT * FROM file WHERE uid = #{uid} AND id = #{id} AND status = 2")
+    FileInfo getRecycleFile(@Param("uid") Long uid, @Param("id") Long id);
+
+    @Delete("DELETE FROM file WHERE update_time < #{expiredTime} AND status = 2")
+    void deleteExpiredRecycleFiles(@Param("expiredTime") LocalDateTime expiredTime);
 }

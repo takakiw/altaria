@@ -8,12 +8,15 @@ import com.github.pagehelper.Page;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
 
 @SpringBootTest
 public class CacheTest {
@@ -74,12 +77,15 @@ public class CacheTest {
 
         redisTemplate.opsForHash().delete("file:1:1", "filaaeName");
     }
+    private final String FILE_PARENT_SIZE_PREFIX = "parent:size";
 
     @Test
     public void testCache2() {
-        long fid = 132312414L;
-        cacheService.updateUploadFileSize(1L, fid, 13713L);
-        System.out.println(cacheService.getUploadFileSize(1L, fid));
+        cacheService.getChildrenOrderUpdateTime(1L, 0L).forEach(System.out::println);
+        cacheService.getChildrenOrderUpdateTimeReverse(1L, 0L).forEach(System.out::println);
+        redisTemplate.opsForZSet().range(FILE_PARENT_SIZE_PREFIX + "1:0", 0, -1).forEach(System.out::println);
+        /*cacheService.getChildrenOrderSize(1L, 0L).forEach(System.out::println);
+        cacheService.getChildrenOrderSizeReverse(1L, 0L).forEach(System.out::println);*/
     }
 
 

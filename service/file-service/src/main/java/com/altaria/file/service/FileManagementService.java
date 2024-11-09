@@ -21,13 +21,13 @@ public interface FileManagementService {
 
     Result<List<FileInfo>> getPath(Long id, Long uid);
 
-    void download(HttpServletResponse response, Long id, Long uid);
+    void download(HttpServletResponse response, Long id, Long uid, Long expire, String sign);
 
     Result deleteFile(List<Long> ids, Long uid);
 
     Result removeFile(List<Long> ids, Long uid);
 
-    Result upload(Long uid, Long fid, Long pid, MultipartFile file, String md5, Integer index, Integer total);
+    Result upload(Long uid, Long fid, Long pid, MultipartFile file, String fileName, String type, String md5, Integer index, Integer total);
 
     Result restoreFile(List<Long> ids, Long uid);
 
@@ -38,4 +38,8 @@ public interface FileManagementService {
     Result<List<FileInfo>> getFileInfoBatch(List<Long> fids, Long uid);
 
     Result saveFileToCloud(List<Long> fids, Long shareUid, Long path, Long userId);
+
+    Result<String> downloadSign(Long id, Long uid);
+
+    Result delUpload(Long id, Long uid);
 }

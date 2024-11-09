@@ -2,8 +2,10 @@ package com.altaria.file.filters;
 
 
 import com.alibaba.fastjson.JSONObject;
+import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
 import com.altaria.common.pojos.common.Result;
+import com.altaria.common.utils.JWTUtil;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,8 +13,9 @@ import jakarta.servlet.http.HttpServletResponse;
 
 
 import java.io.IOException;
+import java.util.Map;
 
-//@WebFilter("/*")
+@WebFilter("/*")
 public class FileFilter implements Filter {
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {

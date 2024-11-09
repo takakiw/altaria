@@ -11,15 +11,14 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 
 import lombok.Data;
-import org.redisson.Redisson;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.*;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,13 +37,6 @@ public class RedisConfig {
     @Value("${spring.data.redis.database:0}")
     private int redisDatabase;
 
-    @Bean(destroyMethod = "shutdown")
-    public RedissonClient redissonClient() {
-        Config config = new Config();
-        config.useSingleServer().setAddress("redis://" + redisHost + ":" + redisPort);
-        return Redisson.create(config);
-    }
-
 
     @Bean
     @SuppressWarnings("all")
@@ -56,6 +48,7 @@ public class RedisConfig {
         factory.setDatabase(redisDatabase);
         factory.setHostName(redisHost);
         factory.setPort(redisPort);
+        factory.setValidateConnection(true);  // 启用连接验证
         factory.afterPropertiesSet();
         template.setConnectionFactory(factory);
 
@@ -118,4 +111,15 @@ public class RedisConfig {
         return jackson2JsonRedisSerializer;
     }
 
+    @Bean
+    public TaskScheduler taskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(5);
+        return scheduler;
+    }
+
+    @Bean
+    public CheckConnection checkConnectTask() {
+        return new CheckConnection();
+    }
 }

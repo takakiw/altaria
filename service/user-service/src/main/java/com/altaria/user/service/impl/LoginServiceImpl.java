@@ -38,8 +38,6 @@ public class LoginServiceImpl implements LoginService {
     private UserMapper userMapper;
 
 
-    @Autowired
-    private RedissonClient redissonClient;
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -62,29 +60,19 @@ public class LoginServiceImpl implements LoginService {
 
     @Override
     public User register(LoginUser loginUser) {
-        RLock lock = redissonClient.getLock("registerLock:" + loginUser.getEmail());
-        try {
-            boolean locked = lock.tryLock(10, 30, TimeUnit.SECONDS);
-            if (locked) {
-                User user = new User();
-                user.setId(IdUtil.getSnowflake(1, 1).nextId());
-                user.setUserName(loginUser.getUserName());
-                user.setEmail(loginUser.getEmail());
-                user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
-                user.setAvatar(UserConstants.DEFAULT_AVATAR);
-                user.setRole(UserConstants.DEFAULT_ROLE);
-                user.setNickName(UserConstants.DEFAULT_NICKNAME_PREFIX + RandomStringUtils.random(5, true, true));
-                int flag = userMapper.insert(user);
-                if (flag > 0) {
-                    return user;
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        } finally {
-            lock.unlock();
+        User user = new User();
+        user.setId(IdUtil.getSnowflake(1, 1).nextId());
+        user.setUserName(loginUser.getUserName());
+        user.setEmail(loginUser.getEmail());
+        user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes()));
+        user.setAvatar(UserConstants.DEFAULT_AVATAR);
+        user.setRole(UserConstants.DEFAULT_ROLE);
+        user.setNickName(UserConstants.DEFAULT_NICKNAME_PREFIX + RandomStringUtils.random(5, true, true));
+        int flag = userMapper.insert(user);
+        if (flag > 0) {
+            return user;
         }
+        return null;
     }
 
     @Override

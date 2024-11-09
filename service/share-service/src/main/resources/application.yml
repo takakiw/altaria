@@ -20,8 +20,4 @@ spring:
 
 file:
   share:
-    url: http://192.168.96.132:9000
-
-logging:
-  level:
-    sql: debug
+    url: http://localhost:9000/shareDetail/

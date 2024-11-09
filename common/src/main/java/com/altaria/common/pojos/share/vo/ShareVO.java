@@ -12,7 +12,6 @@ public class ShareVO {
     private Long uid;
     private String name;
     private Integer type;
-    private String url;
     private LocalDateTime expire;
     private LocalDateTime createTime;
 }

@@ -158,10 +158,10 @@
             </if>
         </where>
         <if test="order == 0">
-            order by update_time desc
+            order by update_time asc
         </if>
         <if test="order == 1">
-            order by update_time asc
+            order by update_time desc
         </if>
         <if test="order == 2">
             order by size asc

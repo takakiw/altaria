@@ -32,14 +32,27 @@ public class FfmpegUtil {
         // "ffmpeg -i %s -y -vframes 1 -vf scale=%d:%d/a %s"
         try {
 
-            FFMPEGProcess ffmpeg = new FFMPEGProcess(ffmpegPath);
+            /*FFMPEGProcess ffmpeg = new FFMPEGProcess(ffmpegPath);
             ffmpeg.addArgument("-i");
             ffmpeg.addArgument(sourceFile.getAbsoluteFile().toString());
             ffmpeg.addArgument("-y");
             ffmpeg.addArgument("-vframes");
-            ffmpeg.addArgument("1");
+            ffmpeg.addArgument("2");
             ffmpeg.addArgument("-vf");
             ffmpeg.addArgument(String.format("scale=%d:%d/a", width, width));
+            ffmpeg.addArgument(targetFile.getAbsoluteFile().toString());
+            ffmpeg.execute();*/
+            // ffmpeg -i .\3494146119kePANfVadk.mp4 -y -f image2 -ss 1 -t 0.001 cover_50s.jpg
+            FFMPEGProcess ffmpeg = new FFMPEGProcess(ffmpegPath);
+            ffmpeg.addArgument("-i");
+            ffmpeg.addArgument(sourceFile.getAbsoluteFile().toString());
+            ffmpeg.addArgument("-y");
+            ffmpeg.addArgument("-f");
+            ffmpeg.addArgument("image2");
+            ffmpeg.addArgument("-ss");
+            ffmpeg.addArgument("1");
+            ffmpeg.addArgument("-t");
+            ffmpeg.addArgument("0.001");
             ffmpeg.addArgument(targetFile.getAbsoluteFile().toString());
             ffmpeg.execute();
             try (BufferedReader br = new BufferedReader(new InputStreamReader(ffmpeg.getErrorStream()))) {

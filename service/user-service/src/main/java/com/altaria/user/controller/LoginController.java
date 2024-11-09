@@ -44,11 +44,15 @@ public class LoginController {
                 || (!type.equals(UserConstants.TYPE_LOGIN) && !type.equals(UserConstants.TYPE_REGISTER))){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        if (cacheService.getEmailCodeTTL(type, email) - 60 > 0){
+        Long emailCodeTTL = cacheService.getEmailCodeTTL(type, email);
+        if (emailCodeTTL != null && emailCodeTTL.intValue() - 60 > 0){
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
         String code = RandomStringUtils.random(6, true, true);
-        cacheService.saveEmailCode(type,code, email);
+        Boolean aBoolean = cacheService.saveEmailCode(type, code, email);
+        if (!aBoolean){
+            return Result.error(StatusCodeEnum.ERROR);
+        }
         loginService.sendCode(email, type, code);
         return Result.success();
     }

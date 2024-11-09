@@ -40,7 +40,20 @@ public enum StatusCodeEnum {
     DIRECTORY_NOT_EXISTS(2021,"目录不存在"),
     CREATE_SHARE_LINK_ERROR(2022, "创建分享链接失败, 请稍后再试"),
     SHARE_NOT_EXISTS(2023, "分享过期或已经被删除"),
-    SHARE_TYPE_ERROR(2024, "分享类型错误");
+    SHARE_TYPE_ERROR(2024, "分享类型错误"),
+    CATEGORY_NOT_FOUND(2025, "分类不存在"),
+    CREATE_NOTE_FAILED(2026, "创建笔记失败"),
+    NOTE_NOT_FOUND(2027, "笔记不存在"),
+    UPDATE_NOTE_FAILED(2028, "更新笔记失败"),
+    DELETE_NOTE_FAILED(2029, "删除笔记失败"),
+    CATEGORY_NAME_INVALID(2030, "分类名称非法"),
+    CATEGORY_ALREADY_EXISTS(2031, "分类已存在"),
+    CATEGORY_ADD_FAILED(2032, "添加分类失败"),
+    CATEGORY_UPDATE_FAILED(2033, "更新分类失败"),
+    CATEGORY_DELETE_FAILED(2034, "删除分类失败"),
+    FILE_TRANSCODING_FAILED(2035, "文件转码失败"),
+    SHARE_SIGN_ERROR(2036, "分享签名错误"),
+    ONLY_FILE_SAVED(2037, "只能保存文件");
 
 
 

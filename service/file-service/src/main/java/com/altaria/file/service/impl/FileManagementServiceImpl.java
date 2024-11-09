@@ -1,5 +1,6 @@
 package com.altaria.file.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -14,11 +15,14 @@ import com.altaria.common.pojos.file.entity.MoveFile;
 import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.file.mq.UploadMQType;
 import com.altaria.common.pojos.space.vo.SpaceVO;
+import com.altaria.common.utils.SignUtil;
+import com.altaria.config.exception.BaseException;
 import com.altaria.feign.client.SpaceServiceClient;
 import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.file.service.FileManagementService;
 import com.altaria.minio.service.MinioService;
+import com.altaria.redis.CheckConnection;
 import com.github.pagehelper.Page;
 import io.seata.spring.annotation.GlobalTransactional;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,7 +41,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -62,6 +69,9 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     @Autowired
     private SpaceServiceClient spaceServiceClient;
+
+    @Autowired
+    private CheckConnection checkConnection;
 
 
     @Value("${temp.file.path:/temp/file/}")
@@ -116,14 +126,14 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         // 复制文件信息
         List<String> fileNames = null;
-        if (cacheService.ParentKeyCodeExists(userId, path)){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(userId, path))){
             fileNames = cacheService.getChildrenAllName(userId, path);
         }else{
             List<FileInfo> childFiles = fileInfoMapper.getChildFiles(path, userId, FileConstants.STATUS_USE);
             fileNames = childFiles.stream().map(FileInfo::getFileName).toList();
         }
         if (fileNames == null || fileNames.isEmpty()){
-            return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
+            fileNames = new ArrayList<>();
         }
         // 修改id, uid, pid, 和判断是否有同名文件
         for (FileInfo shareFileInfo : shareFileInfos) {
@@ -147,7 +157,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             long newId = IdUtil.getSnowflake().nextId();
             List<FileInfo> children = null;
             if (pop.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-                if (cacheService.ParentKeyCodeExists(shareUid, pop.getId())){
+                if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(shareUid, pop.getId()))){
                     children = cacheService.getChildrenOrderUpdateTime(shareUid, pop.getId());
                 }else {
                     children = fileInfoMapper.getChildFiles(pop.getId(), shareUid, FileConstants.STATUS_USE);
@@ -177,6 +187,48 @@ public class FileManagementServiceImpl implements FileManagementService {
         return Result.error(StatusCodeEnum.ERROR);
     }
 
+    @Override
+    public Result<String> downloadSign(Long id, Long uid) {
+        if (id == null || uid == null) {
+            return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
+        }
+        FileInfo file = cacheService.getFile(uid, id);
+        if (file == null){
+            file = fileInfoMapper.getFileById(id, uid);
+            if (file == null){
+                cacheService.saveNullFile(uid, id);
+                return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
+            }
+            cacheService.saveFile(file);
+        }
+        if (file.getId() == null || file.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
+            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
+        if (file.getUrl() == null || file.getTransformed() != FileConstants.TRANSFORMED_END){
+            return Result.error(StatusCodeEnum.FILE_TRANSCODING);
+        }
+        long expire = System.currentTimeMillis() +  60 * 60 * 8; // 8小时过期
+        String sign = SignUtil.sign(uid, id, expire);
+        return Result.success("/file/file/download/" + id + "?expire=" + expire + "&uid=" + uid + "&sign=" + sign);
+    }
+
+    @Override
+    public Result delUpload(Long id, Long uid) {
+        if (id == null || uid == null) {
+            return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
+        }
+        File sourceFile = new File(tempPath + id);
+        if (sourceFile.exists()) {
+            try {
+                FileUtils.forceDelete(sourceFile);
+            } catch (IOException e) {
+                log.error("删除临时文件失败", e);
+                return Result.error(StatusCodeEnum.ERROR);
+            }
+        }
+        return Result.success();
+    }
+
 
     @Override
     public Result mkdir(Long uid, Long pid, String dirName) {
@@ -200,15 +252,18 @@ public class FileManagementServiceImpl implements FileManagementService {
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
+        if (!checkConnection.isRedisConnected()){
+            return Result.error();
+        }
         RLock lock = redissonClient.getLock("fileLock" + pid + ":" + uid + ":" + dirName);
         try {
             boolean b = lock.tryLock(5, 5, TimeUnit.SECONDS);
             if (!b){
                 return Result.error(StatusCodeEnum.ERROR);
             }
-            if (cacheService.ParentKeyCodeExists(uid, pid)){
+            if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, pid))){
                 Boolean isName = cacheService.getChildByFileName(uid, pid, dirName);
-                if (isName){
+                if (Boolean.TRUE.equals(isName)){
                     return Result.error(StatusCodeEnum.FILE_ALREADY_EXISTS);
                 }
             }else {
@@ -250,7 +305,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         // 获取数据库中的文件信息
         List<FileInfo> files = null;
-        if (cacheService.ParentKeyCodeExists(uid, move.getOldPid())){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, move.getOldPid()))){
             files = cacheService.getChildrenOrderUpdateTime(uid, move.getOldPid()).stream().filter(f -> move.getIds().contains(f.getId())).toList();
         }else{
             files = fileInfoMapper.getFileByIds(move.getIds(), uid, FileConstants.STATUS_USE);
@@ -290,9 +345,9 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
         }
         // 查询是否存在同名文件,并修改文件名写入数据库
-        if (cacheService.ParentKeyCodeExists(uid, move.getPid())){ // 缓存中获取
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, move.getPid()))){ // 缓存中获取
             for (FileInfo file : files) {
-                if (cacheService.getChildByFileName(uid, move.getPid(), file.getFileName())){
+                if (Boolean.TRUE.equals(cacheService.getChildByFileName(uid, move.getPid(), file.getFileName()))){
                     file.setFileName(file.getFileName() + "("+ RandomUtil.randomString(2) +")");
                 }
                 file.setPid(move.getPid());
@@ -323,14 +378,15 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             return Result.success(StatusCodeEnum.SUCCESS);
         }
-        throw new RuntimeException("移动失败·");
+        throw new BaseException("移动失败·");
     }
 
     public void pathAddSize(Long uid, Long pid, Long size){
         while (pid.compareTo(FileConstants.ROOT_DIR_ID) != 0){
             FileInfo parentFile = cacheService.getFile(uid, pid);
+            LocalDateTime updateTime = LocalDateTime.now();
             if (parentFile != null && parentFile.getId() != null){
-                fileInfoMapper.updateParentSize(uid, parentFile.getId(), size);
+                fileInfoMapper.updateParentSize(uid, parentFile.getId(), size, updateTime);
                 cacheService.updateFileSize(uid, parentFile.getId(), parentFile.getPid(), size);
                 pid = parentFile.getPid();
             }else {
@@ -338,7 +394,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                 if (parentFile == null){
                     break;
                 }
-                fileInfoMapper.updateParentSize(parentFile.getUid(), parentFile.getId(), size);
+                fileInfoMapper.updateParentSize(parentFile.getUid(), parentFile.getId(), size, updateTime);
                 parentFile.setSize(parentFile.getSize() + size);
                 cacheService.saveFile(parentFile);
                 pid = parentFile.getPid();
@@ -393,8 +449,8 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (file.getId() == null){
             return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
-        if (cacheService.ParentKeyCodeExists(file.getUid(), file.getPid())){
-            if (cacheService.getChildByFileName(file.getUid(), file.getPid(), fileInfo.getFileName())){
+        if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(file.getUid(), file.getPid()))){
+            if (Boolean.TRUE.equals(cacheService.getChildByFileName(file.getUid(), file.getPid(), fileInfo.getFileName()))){
                 return Result.error(StatusCodeEnum.FILE_ALREADY_EXISTS);
             }
         }else {
@@ -425,7 +481,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (uid == null) {
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
-        if (id.compareTo(FileConstants.ROOT_DIR_ID) != 0){
+        if (id != null && id.compareTo(FileConstants.ROOT_DIR_ID) != 0){
             FileInfo file = cacheService.getFile(uid, id);
             if (file == null){
                 file = fileInfoMapper.getFileById(id, uid);
@@ -439,48 +495,55 @@ public class FileManagementServiceImpl implements FileManagementService {
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
-        if (cacheService.ParentKeyCodeExists(uid, id)){
-            List<FileInfo> targetFiles = new ArrayList<>();
+
+
+        // 如果id存在，则从缓存中获取文件信息
+        if (id != null && Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, id))){
+            List<FileInfo> targetFiles = null;
             switch (order) {
                 case 0 -> targetFiles = cacheService.getChildrenOrderUpdateTimeReverse(uid, id);
                 case 1 -> targetFiles = cacheService.getChildrenOrderUpdateTime(uid, id);
                 case 2 -> targetFiles = cacheService.getChildrenOrderSize(uid, id);
                 case 3 -> targetFiles = cacheService.getChildrenOrderSizeReverse(uid, id);
                 case 4 -> {
-                    List<Long> fidList = cacheService.getChildrenOrderName(uid, id);
-                    targetFiles = fidList.stream().map(fid -> cacheService.getFile(uid, fid)).toList();
+                    List<FileInfo> children = cacheService.getChildrenOrderSize(uid, id);
+                    targetFiles = children.stream().sorted((f1, f2) -> f1.getFileName().compareTo(f2.getFileName())).toList();
                 }
                 case 5 -> {
-                    List<Long> fidListReverse = cacheService.getChildrenOrderNameReverse(uid, id);
-                    targetFiles = fidListReverse.stream().map(fid -> cacheService.getFile(uid, fid)).toList();
+                    List<FileInfo> children = cacheService.getChildrenOrderSize(uid, id);
+                    targetFiles = children.stream().sorted((f1, f2) -> f2.getFileName().compareTo(f1.getFileName())).toList();
                 }
                 default -> targetFiles = cacheService.getChildrenOrderUpdateTime(uid, id);
             }
-            targetFiles.stream()
-                    .filter(f -> type == null || f.getType().compareTo(type) == 0 && (fileName == null || f.getFileName().contains(fileName)))
+            targetFiles = targetFiles.stream()
+                    .filter(f -> f != null &&  // 确保 f 不为 null
+                            (type == null || (f.getType() != null && f.getType().compareTo(type) == 0)) &&  // 确保 f.getType() 不为 null
+                            (fileName == null || (f.getFileName() != null && f.getFileName().contains(fileName))))
                     .toList();
             return Result.success(new PageResult<>(targetFiles.size(), targetFiles));
-        }else {
+        } else {
             FileInfo fileInfo = new FileInfo();
             fileInfo.setPid(id);
             fileInfo.setUid(uid);
-            fileInfo.setStatus(FileConstants.STATUS_USE);
+            fileInfo.setStatus((type == null || type.compareTo(FileConstants.WEB_RECYCLE_CODE) != 0) ? FileConstants.STATUS_USE: FileConstants.STATUS_RECYCLE);
             Page<FileInfo> select = fileInfoMapper.select(fileInfo);
-            cacheService.saveAllChildren(uid, id, select.getResult());
+            if (id != null) cacheService.saveAllChildren(uid, id, select.getResult());
             List<FileInfo> result = select.getResult();
-            result.stream()
-                    .filter(f -> type == null || f.getType().compareTo(type) == 0 && (fileName == null || f.getFileName().contains(fileName)))
-                    .toList();
+            List<FileInfo> realResult = new ArrayList<>(result.stream()
+                    .filter(f ->
+                            (type == null || FileConstants.WEB_RECYCLE_CODE.compareTo(type) == 0 || FileConstants.FILE_TYPE_MAP.getOrDefault(type, new ArrayList<>()).contains(f.getType()))
+                                    && (fileName == null || f.getFileName().contains(fileName)))
+                    .toList());
             switch (order) {
-                case 0 -> result.sort((f1, f2) -> f2.getUpdateTime().compareTo(f1.getUpdateTime()));
-                case 1 -> result.sort((f1, f2) -> f1.getUpdateTime().compareTo(f2.getUpdateTime()));
-                case 2 -> result.sort((f1, f2) -> f1.getSize().compareTo(f2.getSize()));
-                case 3 -> result.sort((f1, f2) -> f2.getSize().compareTo(f1.getSize()));
-                case 4 -> result.sort((f1, f2) -> f1.getFileName().compareTo(f2.getFileName()));
-                case 5 -> result.sort((f1, f2) -> f2.getFileName().compareTo(f1.getFileName()));
-                default -> result.sort((f1, f2) -> f1.getUpdateTime().compareTo(f2.getUpdateTime()));
+                case 0 -> realResult.sort((f1, f2) -> f2.getUpdateTime().compareTo(f1.getUpdateTime()));
+                case 1 -> realResult.sort((f1, f2) -> f1.getUpdateTime().compareTo(f2.getUpdateTime()));
+                case 2 -> realResult.sort((f1, f2) -> f1.getSize().compareTo(f2.getSize()));
+                case 3 -> realResult.sort((f1, f2) -> f2.getSize().compareTo(f1.getSize()));
+                case 4 -> realResult.sort((f1, f2) -> f1.getFileName().compareTo(f2.getFileName()));
+                case 5 -> realResult.sort((f1, f2) -> f2.getFileName().compareTo(f1.getFileName()));
+                default ->realResult.sort((f1, f2) -> f1.getUpdateTime().compareTo(f2.getUpdateTime()));
             }
-            return Result.success(new PageResult<>(result.size(), result));
+            return Result.success(new PageResult<>(realResult.size(), realResult));
         }
     }
 
@@ -488,6 +551,9 @@ public class FileManagementServiceImpl implements FileManagementService {
     public Result<List<FileInfo>> getPath(Long id, Long uid) {
         if (id == null || uid == null) {
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+        }
+        if (id.compareTo(FileConstants.ROOT_DIR_ID) == 0){
+            return Result.success(List.of(getRootDIR(uid)));
         }
         FileInfo file = cacheService.getFile(uid, id);
         if (file == null){
@@ -544,25 +610,38 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
         List<FileInfo> recycleFiles = null;
-        if (cacheService.existsRecycleChildren(uid)){
-            recycleFiles = cacheService.getRecycleFiles(uid);
+        if (Boolean.TRUE.equals(cacheService.existsRecycleChildren(uid))){
+            recycleFiles = cacheService.getAllRecycleFiles(uid);
         }else {
             recycleFiles = fileInfoMapper.getRecycleFiles(uid);
             if (recycleFiles != null && !recycleFiles.isEmpty()){
-                cacheService.saveRecycleFiles(uid, recycleFiles);
+                cacheService.saveAllRecycleFiles(uid, recycleFiles);
             }
             if (recycleFiles == null){
                 return Result.success(new PageResult<>(0, null));
             }
         }
+        // 过虑过期文件
+        List<Long> ids = recycleFiles.stream().filter(f ->
+                f.getUpdateTime().toEpochSecond(ZoneOffset.of("+8")) + FileConstants.RECYCLE_EXPIRE_TIME <= LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8"))).map(FileInfo::getId).toList();
+        rabbitTemplate.convertAndSend( "recycle-delete-queue", uid + "-" + StringUtils.join(ids, ","));
+        System.out.println(ids);
+
+        recycleFiles = recycleFiles.stream().filter(f ->
+                f.getUpdateTime().toEpochSecond(ZoneOffset.of("+8")) + FileConstants.RECYCLE_EXPIRE_TIME > LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8"))).toList();
         return Result.success(new PageResult<>(recycleFiles.size(), recycleFiles));
     }
 
 
     @Override
-    public void download(HttpServletResponse response, Long id, Long uid) {
+    public void download(HttpServletResponse response, Long id, Long uid, Long expire, String sign) {
         if (id == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
+            return;
+        }
+        boolean checkSign = SignUtil.checkSign(uid, id, expire, sign);
+        if (!checkSign) {
+            writerResponse(response, StatusCodeEnum.PARAM_ERROR);
             return;
         }
         FileInfo file = cacheService.getFile(uid, id);
@@ -578,7 +657,8 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (file.getId() == null || file.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
             writerResponse(response, StatusCodeEnum.ILLEGAL_REQUEST); // 文件不能下载
         }
-        if (file.getUrl() == null){
+        if (file.getUrl() == null || file.getTransformed() != FileConstants.TRANSFORMED_END){
+            log.info("download: {}", id);
             writerResponse(response, StatusCodeEnum.FILE_TRANSCODING);
             return;
         }
@@ -592,54 +672,50 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
         List<FileInfo> dbFiles = fileInfoMapper.getFileByIds(ids, uid, FileConstants.STATUS_USE);
-        cacheService.saveRecycleFiles(uid, dbFiles);
         if (dbFiles == null || dbFiles.isEmpty()){
             return Result.success();
         }
         ids = dbFiles.stream().map(FileInfo::getId).toList();
-        List<Long> pids = dbFiles.stream().map(FileInfo::getPid).collect(Collectors.toSet()).stream().toList();
-        if (pids.size() != 1){
-            if (pids.size() == 0){
-                return Result.success();
-            }
-            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-        }
-
-        // 更新父目录大小
-        long size = dbFiles.stream().map(FileInfo::getSize).reduce(0L, Long::sum);
         // 缓存删除文件
         fileInfoMapper.updateStatusBatch(uid, ids, FileConstants.STATUS_RECYCLE, LocalDateTime.now());
         cacheService.deleteFileBatch(uid, ids);
-        cacheService.deleteAllChildren(uid, pids.get(0));
-        // 递归获取所有子文件
-        Set<Long> set = new HashSet<>();
-        Stack<FileInfo> stk = new Stack<>();
-        stk.addAll(dbFiles);
-        while (!stk.isEmpty()){
-            FileInfo fileInfo = stk.pop();
-            set.add(fileInfo.getId());
-            if (fileInfo.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-                if (cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId())){
-                    List<FileInfo> children = cacheService.getChildrenOrderUpdateTime(uid, fileInfo.getId());
-                    List<Long> longs = children.stream().map(FileInfo::getId).toList();
-                    set.addAll(longs);
-                    stk.addAll(children);
-                    cacheService.deleteAllChildren(uid, fileInfo.getId());
-                }else {
-                    List<FileInfo> childFiles = fileInfoMapper.getChildFiles(fileInfo.getId(), uid, FileConstants.STATUS_USE);
-                    List<Long> longs = childFiles.stream().map(FileInfo::getId).toList();
-                    set.addAll(longs);
-                    stk.addAll(childFiles);
+        for (FileInfo dbFile : dbFiles) {
+            // 递归获取所有子文件
+            Set<Long> set = new HashSet<>();
+            Stack<FileInfo> stk = new Stack<>();
+            stk.add(dbFile);
+            while (!stk.isEmpty()){
+                FileInfo fileInfo = stk.pop();
+                set.add(fileInfo.getId());
+                if (fileInfo.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
+                    if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId()))){
+                        List<FileInfo> children = cacheService.getChildrenOrderUpdateTime(uid, fileInfo.getId());
+                        List<Long> longs = children.stream().map(FileInfo::getId).toList();
+                        set.addAll(longs);
+                        stk.addAll(children);
+                        cacheService.deleteAllChildren(uid, fileInfo.getId());
+                    }else {
+                        List<FileInfo> childFiles = fileInfoMapper.getChildFiles(fileInfo.getId(), uid, FileConstants.STATUS_USE);
+                        List<Long> longs = childFiles.stream().map(FileInfo::getId).toList();
+                        set.addAll(longs);
+                        stk.addAll(childFiles);
+                    }
                 }
+                cacheService.deleteFile(uid, fileInfo.getId());
             }
-            cacheService.deleteFile(uid, fileInfo.getId());
+            set.remove(dbFile.getId());
+            List<Long> dbDelFid = set.stream().toList();
+            if (!dbDelFid.isEmpty()){
+                fileInfoMapper.updateStatusBatch(uid, dbDelFid, FileConstants.STATUS_DELETE, LocalDateTime.now());
+            }
+            cacheService.deleteAllChildren(uid, dbFile.getPid());
+            pathAddSize(uid, dbFile.getPid(), -dbFile.getSize());
+            dbFiles.forEach(fileInfo -> {
+                fileInfo.setUpdateTime(LocalDateTime.now());
+                fileInfo.setStatus(FileConstants.STATUS_RECYCLE);
+            });
+            cacheService.saveRecycleFiles(uid, dbFiles);
         }
-        set.removeAll(ids);
-        List<Long> dbDelFid = set.stream().toList();
-        if (!dbDelFid.isEmpty()){
-            fileInfoMapper.updateStatusBatch(uid, dbDelFid, FileConstants.STATUS_DELETE, LocalDateTime.now());
-        }
-        pathAddSize(uid, pids.get(0), -size);
         return Result.success();
     }
 
@@ -686,7 +762,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             set.add(fileInfo.getId());
             if (fileInfo.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-                if (cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId())){
+                if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(fileInfo.getUid(), fileInfo.getId()))){
                     List<FileInfo> children = cacheService.getChildrenOrderUpdateTime(uid, fileInfo.getId());
                     List<Long> longs = children.stream().map(FileInfo::getId).toList();
                     set.addAll(longs);
@@ -703,7 +779,6 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
 
         List<FileInfo> delFileList = dbFiles.stream().filter(f -> f.getStatus().compareTo(FileConstants.STATUS_RECYCLE) == 0).toList();
-        cacheService.deleteRecycleFiles(uid, delFileList.stream().map(FileInfo::getId).toList());
         size += delFileList.stream().map(FileInfo::getSize).reduce(0L, Long::sum);
         stk.addAll(delFileList);
         while (!stk.isEmpty()){
@@ -726,6 +801,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
         }
         if (set.isEmpty()){
+            cacheService.deleteRecycleFiles(uid, delFileList.stream().map(FileInfo::getId).toList());
             return Result.success();
         }
         fileInfoMapper.deleteBatch(set.stream().toList(), uid);
@@ -734,27 +810,31 @@ public class FileManagementServiceImpl implements FileManagementService {
             if (Objects.equals(md5Count.get(md5), md5Total.get(md5))){
                 delUrls.add(md5UrlMap.get(md5));
                 String url = md5UrlMap.get(md5);
-                String cover = url.substring(0, url.lastIndexOf("."));
-                delUrls.add(cover + "_.jpg");
-                System.out.println("删除文件：" + url);
-                System.out.println("删除封面：" + cover + "_.jpg");
+                if(url != null && url.lastIndexOf(".") != -1){
+                    String cover = url.substring(0, url.lastIndexOf("."));
+                    delUrls.add(cover + "_.jpg");
+                }
             }
         }
         spaceServiceClient.updateSpace(uid, new Space(uid, -size));
         rabbitTemplate.convertAndSend("delete-queue", StringUtils.join(delUrls, ","));
+        cacheService.deleteRecycleFiles(uid, delFileList.stream().map(FileInfo::getId).toList());
         return Result.success();
     }
 
     @GlobalTransactional
     @Transactional
     @Override
-    public Result upload(Long uid, Long fid, Long pid, MultipartFile file, String md5, Integer index, Integer total) {
+    public Result upload(Long uid, Long fid, Long pid, MultipartFile file, String fileName, String type, String md5, Integer index, Integer total) {
         if (uid == null || file.isEmpty()){
             return Result.error(StatusCodeEnum.PARAM_NOT_NULL);
         }
         long size = file.getSize();
         if (size <= 0){
             return Result.error(StatusCodeEnum.FILE_UPLOAD_FAILED);
+        }
+        if (!checkConnection.isRedisConnected()){
+            return Result.error();
         }
         RLock lock = redissonClient.getLock("upload_" + uid + ":" + pid + ":" + fid + ":" + index);
         try{
@@ -781,10 +861,8 @@ public class FileManagementServiceImpl implements FileManagementService {
             List<FileInfo> fileByMd5s = fileInfoMapper.getFileByMd5(md5);
             if (fileByMd5s != null && !fileByMd5s.isEmpty()) {
                 FileInfo fileByMd5 = fileByMd5s.get(0);
-                long start = System.currentTimeMillis();
                 SpaceVO space = spaceServiceClient.space(uid).getData();
                 log.error(space.toString());
-                System.out.println("秒传：" + (System.currentTimeMillis() - start) + space);
                 if (fileByMd5.getSize() + space.getUseSpace() > space.getTotalSpace()) {
                     log.error("秒传失败，空间不足");
                     return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
@@ -792,32 +870,29 @@ public class FileManagementServiceImpl implements FileManagementService {
                 fileByMd5.setId(IdUtil.getSnowflake(1, 1).nextId());
                 fileByMd5.setPid(pid);
                 fileByMd5.setUid(uid);
-                fileByMd5.setFileName(file.getOriginalFilename());
+                fileByMd5.setFileName(fileName);
                 fileByMd5.setStatus(FileConstants.STATUS_USE);
                 fileByMd5.setUpdateTime(LocalDateTime.now());
                 fileByMd5.setCreateTime(LocalDateTime.now());
                 try {
                     saveFile(fileByMd5);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new BaseException(e.getMessage());
                 }
-                cacheService.deleteUploadFile(uid, fid);
+                cacheService.deleteUploadFile(fid);
                 log.info("秒传");
                 return Result.success(100);
             }
         }
 
         // 0 ~ n - 1分片处理
-        long l = System.currentTimeMillis();
         SpaceVO usedSpace = spaceServiceClient.space(uid).getData();
-        System.out.println("正常传输：" + (System.currentTimeMillis() - l) + usedSpace);
-        log.error(usedSpace.toString());
-        cacheService.updateUploadFileSize(uid, fid, size);
-        long uploadFileSize = cacheService.getUploadFileSize(uid, fid);
+        cacheService.updateUploadFileSize(fid, size);
+        long uploadFileSize = cacheService.getUploadFileSize(fid);
         try {
             if (usedSpace.getUseSpace() + uploadFileSize > usedSpace.getTotalSpace()) {
                 log.info("空间不足{}", uid);
-                throw new Exception("空间不足");
+                throw new BaseException("空间不足");
             }
             tempDir = new File(tempPath + fid);
             if (!tempDir.exists()) {
@@ -829,8 +904,8 @@ public class FileManagementServiceImpl implements FileManagementService {
                 FileInfo dbFile = new FileInfo();
                 long dbId = IdUtil.getSnowflake(1, 1).nextId();
                 dbFile.setId(dbId);
-                dbFile.setFileName(file.getOriginalFilename());
-                dbFile.setType(FileType.getFileType(file.getContentType()).getType());
+                dbFile.setFileName(fileName);
+                dbFile.setType(FileType.getFileType(type).getType());
                 dbFile.setPid(pid);
                 dbFile.setUid(uid);
                 dbFile.setStatus(FileConstants.STATUS_USE);
@@ -840,9 +915,9 @@ public class FileManagementServiceImpl implements FileManagementService {
                 dbFile.setCreateTime(LocalDateTime.now());
                 dbFile.setSize(uploadFileSize);
                 saveFile(dbFile);
-                cacheService.deleteUploadFile(uid, fid);
-                String suffix = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-                String contentType = file.getContentType();
+                cacheService.deleteUploadFile(fid);
+                String suffix = fileName.substring(fileName.lastIndexOf("."));
+                String contentType = type;
                 // 使用rabbitmq 异步转码
                 rabbitTemplate.convertAndSend("upload-queue",new UploadMQType(uid, dbId, fid, contentType, suffix, tempPath, md5));
                 return Result.success(200);
@@ -852,24 +927,29 @@ public class FileManagementServiceImpl implements FileManagementService {
             if (tempDir != null){
                 FileUtils.deleteQuietly(tempDir);
             }
-            cacheService.deleteUploadFile(uid, fid);
+            cacheService.deleteUploadFile(fid);
             log.error("文件上传失败");
-            throw new RuntimeException(e.getMessage()); // 抛出异常，确保事务回滚
+            throw new BaseException(e.getMessage()); // 抛出异常，确保事务回滚
+        }finally {
+            if (lock.isLocked()) lock.unlock();
         }
     }
 
 
     private void saveFile(FileInfo saveFile){
+        if (!checkConnection.isRedisConnected()){
+            throw new BaseException("系统异常");
+        }
         RLock lock = redissonClient.getLock("fileInfoLock" + saveFile.getUid() + ":" + saveFile.getPid() + ":" + saveFile.getFileName());
         boolean b = false;
         try {
             b = lock.tryLock(5, 5, TimeUnit.SECONDS);
             if (!b){
-                throw new Exception("文件锁失败");
+                throw new BaseException("系统繁忙，请稍后再试");
             }
             // 查询是否存在同名文件
-            if (cacheService.ParentKeyCodeExists(saveFile.getUid(), saveFile.getPid())){
-                if (cacheService.getChildByFileName(saveFile.getUid(), saveFile.getPid(), saveFile.getFileName())){
+            if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(saveFile.getUid(), saveFile.getPid()))){
+                if (Boolean.TRUE.equals(cacheService.getChildByFileName(saveFile.getUid(), saveFile.getPid(), saveFile.getFileName()))){
                     saveFile.setFileName(saveFile.getFileName() + "("+ RandomUtil.randomString(2) +")");
                 }
             }else {
@@ -887,9 +967,9 @@ public class FileManagementServiceImpl implements FileManagementService {
                 cacheService.saveFile(saveFile);
                 return;
             }
-            throw new Exception("文件上传失败");
+            throw new BaseException("文件上传失败");
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new BaseException(e.getMessage());
         }finally {
             try {
                 if (b && lock.isLocked()){
@@ -909,7 +989,12 @@ public class FileManagementServiceImpl implements FileManagementService {
         if (ids.isEmpty()){
             return Result.success();
         }
-        List<FileInfo> dbFiles = fileInfoMapper.getFileByIds(ids, uid, FileConstants.STATUS_RECYCLE);
+        List<FileInfo> dbFiles = null;
+        if (cacheService.existsRecycleChildren(uid)){
+            dbFiles = cacheService.getRecycleFiles(uid, ids);
+        }else {
+            dbFiles = fileInfoMapper.getFileByIds(ids, uid, FileConstants.STATUS_RECYCLE);
+        }
         if (dbFiles == null || dbFiles.isEmpty()){
             return Result.success();
         }
@@ -917,18 +1002,18 @@ public class FileManagementServiceImpl implements FileManagementService {
         Map<Long, Long> pidAndSize = new HashMap<>();
         for (FileInfo fileInfo : dbFiles){
             FileInfo parentFile = cacheService.getFile(uid, fileInfo.getPid());
-            if (parentFile != null && parentFile.getId() != null){
+            if (parentFile == null){
                 parentFile = fileInfoMapper.getFileById(fileInfo.getPid(), uid);
-                if (parentFile == null){
-                    // 父目录不存在, 无法还原,设置父目录为根目录
-                    fileInfo.setPid(FileConstants.ROOT_DIR_ID);
-                }else {
-                    fileInfo.setPid(parentFile.getId());
-                }
+            }
+            if (parentFile == null || parentFile.getId() == null){
+                // 父目录不存在, 无法还原,设置父目录为根目录
+                fileInfo.setPid(FileConstants.ROOT_DIR_ID);
+            }else {
+                fileInfo.setPid(parentFile.getId());
             }
             // 判断父目录下是否存在同名文件
-            if (cacheService.ParentKeyCodeExists(uid, fileInfo.getPid())){
-                if(cacheService.getChildByFileName(uid, fileInfo.getPid(), fileInfo.getFileName())){
+            if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(uid, fileInfo.getPid()))){
+                if(Boolean.TRUE.equals(cacheService.getChildByFileName(uid, fileInfo.getPid(), fileInfo.getFileName()))){
                     fileInfo.setFileName(fileInfo.getFileName() + "("+ RandomUtil.randomString(2) +")");
 
                 }
@@ -959,6 +1044,8 @@ public class FileManagementServiceImpl implements FileManagementService {
             }else {
                 pidAndSize.put(fileInfo.getPid(), fileInfo.getSize());
             }
+            fileInfoMapper.update(fileInfo);
+            cacheService.saveFile(fileInfo);
         }
         // 更新父目录大小
         for (Long pid : pidAndSize.keySet()){
@@ -970,6 +1057,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.success();
         }
         fileInfoMapper.updateStatusBatch(uid, updateIds, FileConstants.STATUS_USE, LocalDateTime.now());
+        cacheService.deleteRecycleFiles(uid, updateIds);
         return Result.success();
     }
 

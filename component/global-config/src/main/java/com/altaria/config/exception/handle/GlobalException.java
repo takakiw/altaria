@@ -1,6 +1,7 @@
 package com.altaria.config.exception.handle;
 
 import com.altaria.common.pojos.common.Result;
+import com.altaria.config.exception.BaseException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindException;
@@ -15,6 +16,12 @@ public class GlobalException {
         return Result.error(ex.getMessage());
     }
 
+    @ExceptionHandler(BaseException.class)
+    public Result handleBaseExceptions(BaseException ex) {
+        System.out.println("BaseException" + ex.getMessage());
+        return Result.error(ex.getMessage());
+    }
+
     @ExceptionHandler(BindException.class)
     public Result paramEx(BindException be){
         Result result = new Result();
@@ -25,9 +32,6 @@ public class GlobalException {
 
     @ExceptionHandler(Exception.class)
     public Result err(Exception e){
-        if (e.getMessage() == null){
-            return Result.error();
-        }
-        return Result.error(e.getMessage());
+        return Result.error();
     }
 }

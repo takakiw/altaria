@@ -138,12 +138,17 @@ public class UserServiceImpl implements UserService {
         if(!email.matches(UserConstants.EMAIL_REGEX)){
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
-        if (cacheService.getEmailCodeTTL(UserConstants.TYPE_UPDATE_PWD, email) - 60 > 0){
+        Long emailCodeTTL = cacheService.getEmailCodeTTL(UserConstants.TYPE_UPDATE_PWD, email);
+        if (emailCodeTTL != null && emailCodeTTL.intValue() - 60 > 0){
             return Result.error(StatusCodeEnum.SEND_FREQUENTLY);
         }
         threadPoolTaskExecutor.execute(() -> {
             String code = RandomStringUtils.random(6, true, true);
-            cacheService.saveEmailCode(UserConstants.TYPE_UPDATE_PWD,code, email);
+            Boolean aBoolean = cacheService.saveEmailCode(UserConstants.TYPE_UPDATE_PWD, code, email);
+            if (!aBoolean){
+                log.error("验证码保存失败");
+                return;
+            }
             String text = UserConstants.EMAIL_UPDATE_PWD_TEXT;
             String subject = UserConstants.EMAIL_UPDATE_PWD_SUBJECT;
             sendEmail(email,subject, String.format(text, code));

@@ -2,7 +2,6 @@ package com.altaria.file.cache;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.pojos.file.entity.FileInfo;
-import com.altaria.common.pojos.space.entity.Space;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -14,7 +13,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -32,11 +31,11 @@ public class FileCacheService {
 
 
 
-    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24 * 1L; // 2天
+    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2天
     private static final String FILE_UPLOAD_PREFIX = "upload:"; // hset upload:uid:fid values
     private static final String FILE_RECYCLE_PREFIX = "recycle:";
     private static final String FILE_RECYCLE_PARENT_PREFIX = "recycle:parent";
-    private static final long FILE_RECYCLE_EXPIRATION_TIME = 60 * 60 * 24 * 1L; // 1天
+    private static final long FILE_RECYCLE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2天
 
 
     @Autowired
@@ -86,22 +85,10 @@ public class FileCacheService {
 
     public FileInfo getFile(Long uid, Long fid){
         Map<Object, Object> data = redisTemplate.opsForHash().entries(FILE_PREFIX + uid + ":" + fid);
-        if (data == null || data.isEmpty()){
+        if (data.isEmpty()){
             return null;
         }
         return BeanUtil.copyProperties(data, FileInfo.class);
-    }
-
-    public List<FileInfo> getFiles(Long uid, List<Long> fids){
-        List<FileInfo> fileInfoList = new ArrayList<>();
-        for (Long fid : fids){
-            Map<Object, Object> data = redisTemplate.opsForHash().entries(FILE_PREFIX + uid + ":" + fid);
-            if (data == null || data.isEmpty()){
-                continue;
-            }
-            fileInfoList.add(BeanUtil.copyProperties(data, FileInfo.class));
-        }
-        return fileInfoList;
     }
 
 
@@ -127,7 +114,7 @@ public class FileCacheService {
             }
         }
         if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PARENT_SIZE_PREFIX + uid + ":" + pid))){ // 更新父目录大小
-            redisTemplate.opsForZSet().incrementScore(FILE_PARENT_SIZE_PREFIX + uid + ":" + pid, uid, size);
+            redisTemplate.opsForZSet().incrementScore(FILE_PARENT_SIZE_PREFIX + uid + ":" + pid, fid, size);
             redisTemplate.opsForZSet().add(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid, fid, LocalDateTime.now().toEpochSecond(ZoneOffset.UTC));
         }
     }
@@ -195,28 +182,25 @@ public class FileCacheService {
     }
 
     public List<FileInfo> getChildrenOrderUpdateTime(Long uid, Long fid){
-        List<Long> longs = redisTemplate.opsForZSet().range(FILE_PARENT_UPDATE_PREFIX + uid + ":" + fid, 0, -1).stream().map(o -> (Long) o).toList();
-        List<FileInfo> fileInfos = longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
-        return fileInfos;
+        List<Long> longs = Objects.requireNonNull(redisTemplate.opsForZSet().range(FILE_PARENT_UPDATE_PREFIX + uid + ":" + fid, 0, -1)).stream().map(o -> (Long) o).toList();
+        return longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
     }
     
     public List<FileInfo> getChildrenOrderUpdateTimeReverse(Long uid, Long fid){
-        List<Long> longs = redisTemplate.opsForZSet().reverseRange(FILE_PARENT_UPDATE_PREFIX + uid + ":" + fid, 0, -1).stream().map(o -> (Long) o).toList();
-        List<FileInfo> fileInfos = longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
-        return fileInfos;
+        List<Long> longs = Objects.requireNonNull(redisTemplate.opsForZSet().reverseRange(FILE_PARENT_UPDATE_PREFIX + uid + ":" + fid, 0, -1)).stream().map(o -> (Long) o).toList();
+        return longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
     }
 
     public List<FileInfo> getChildrenOrderSize(Long uid, Long fid){
-        List<Long> longs = redisTemplate.opsForZSet().range(FILE_PARENT_SIZE_PREFIX + uid + ":" + fid, 0, -1).stream().map(o -> (Long) o).toList();
+        List<Long> longs = Objects.requireNonNull(redisTemplate.opsForZSet().range(FILE_PARENT_SIZE_PREFIX + uid + ":" + fid, 0, -1)).stream().map(o -> (Long) o).toList();
         List<FileInfo> fileInfos = longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
         return fileInfos;
     }
 
 
     public List<FileInfo> getChildrenOrderSizeReverse(Long uid, Long fid){
-        List<Long> longs = redisTemplate.opsForZSet().reverseRange(FILE_PARENT_SIZE_PREFIX + uid + ":" + fid, 0, -1).stream().map(o -> (Long) o).toList();
-        List<FileInfo> fileInfos = longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
-        return fileInfos;
+        List<Long> longs = Objects.requireNonNull(redisTemplate.opsForZSet().reverseRange(FILE_PARENT_SIZE_PREFIX + uid + ":" + fid, 0, -1)).stream().map(o -> (Long) o).toList();
+        return longs.stream().map(cacheId -> getFile(uid, cacheId)).toList();
     }
 
 
@@ -224,21 +208,6 @@ public class FileCacheService {
         return redisTemplate.opsForZSet().rangeByScore(FILE_PARENT_NAME_PREFIX + uid + ":" + fid,0, Long.MAX_VALUE).stream().map(o -> (String) o).toList();
     }
 
-    public List<Long> getChildrenOrderName(Long uid, Long fid){
-        Set<ZSetOperations.TypedTuple<Object>> typedTuples = redisTemplate.opsForZSet().rangeWithScores(FILE_PARENT_NAME_PREFIX + uid + ":" + fid, 0, -1);
-        List<Long> longs = typedTuples.stream().sorted((o1, o2) -> {
-            return o1.getValue().toString().compareTo(o2.getValue().toString());
-        }).map(o -> o.getScore().longValue()).toList();
-        return longs;
-    }
-
-    public List<Long> getChildrenOrderNameReverse(Long uid, Long fid){
-        Set<ZSetOperations.TypedTuple<Object>> typedTuples = redisTemplate.opsForZSet().rangeWithScores(FILE_PARENT_NAME_PREFIX + uid + ":" + fid, 0, -1);
-        List<Long> longs = typedTuples.stream().sorted((o1, o2) -> {
-            return o2.getValue().toString().compareTo(o1.getValue().toString());
-        }).map(o -> o.getScore().longValue()).toList();
-        return longs;
-    }
 
     public Boolean getChildByFileName(Long uid, Long fid, String fileName){
         Long rank = redisTemplate.opsForZSet().rank(FILE_PARENT_NAME_PREFIX + uid + ":" + fid, fileName);
@@ -247,7 +216,7 @@ public class FileCacheService {
 
 
 
-    public boolean ParentKeyCodeExists(Long uid, Long pid) {
+    public Boolean ParentKeyCodeExists(Long uid, Long pid) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(FILE_PARENT_UPDATE_PREFIX + uid + ":" + pid));
     }
 
@@ -263,30 +232,52 @@ public class FileCacheService {
         redisTemplate.delete(FILE_PARENT_SIZE_PREFIX + uid + ":" + id);
     }
 
-    public void updateUploadFileSize(Long uid, Long fid, long size) {
-        redisTemplate.opsForValue().increment(FILE_UPLOAD_PREFIX + uid + ":" + fid, size);
-        redisTemplate.expire(FILE_UPLOAD_PREFIX + uid + ":" + fid, FILE_UPLOAD_EXPIRATION_TIME, TimeUnit.SECONDS);
+    public boolean existsUploadFile(Long fid) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(FILE_UPLOAD_PREFIX + ":" + fid));
     }
 
-    public long getUploadFileSize(Long uid, Long fid) {
-        Object o = redisTemplate.opsForValue().get(FILE_UPLOAD_PREFIX + uid + ":" + fid);
+    // 更新上传文件大小
+    public void updateUploadFileSize(Long fid, long size) {
+        redisTemplate.opsForValue().increment(FILE_UPLOAD_PREFIX  + ":" + fid, size);
+        redisTemplate.expire(FILE_UPLOAD_PREFIX +  ":" + fid, FILE_UPLOAD_EXPIRATION_TIME, TimeUnit.SECONDS);
+    }
+
+    public long getUploadFileSize(Long fid) {
+        Object o = redisTemplate.opsForValue().get(FILE_UPLOAD_PREFIX + ":" + fid);
         if (o == null){
             return 0;
         }
         return Long.parseLong(o.toString());
     }
 
-    public void deleteUploadFile(Long uid, Long fid) {
-        redisTemplate.delete(FILE_UPLOAD_PREFIX + uid + ":" + fid);
+    public void deleteUploadFile(Long fid) {
+        redisTemplate.delete(FILE_UPLOAD_PREFIX + ":" + fid);
     }
 
     private FileInfo getRecycleFile(Long uid, Long fid) {
         Map<Object, Object> data = redisTemplate.opsForHash().entries(FILE_RECYCLE_PREFIX + uid + ":" + fid);
-        if (data == null || data.isEmpty()){
+        if (data.isEmpty()){
             return null;
         }
         return BeanUtil.copyProperties(data, FileInfo.class);
     }
+
+
+    public void saveAllRecycleFiles(Long uid, List<FileInfo> fileInfoList) {
+        if (fileInfoList == null || fileInfoList.isEmpty()){
+            return;
+        }
+        redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (FileInfo fileInfo : fileInfoList) {
+                redisTemplate.opsForHash().putAll(FILE_RECYCLE_PREFIX + uid + ":" + fileInfo.getId(), BeanUtil.beanToMap(fileInfo));
+                redisTemplate.opsForZSet().add(FILE_RECYCLE_PARENT_PREFIX + uid, fileInfo.getId(), fileInfo.getCreateTime().toEpochSecond(ZoneOffset.UTC));
+                redisTemplate.expire(FILE_RECYCLE_PREFIX + uid + ":" + fileInfo.getId(), FILE_RECYCLE_EXPIRATION_TIME, TimeUnit.SECONDS);
+            }
+            return null;
+        });
+        redisTemplate.expire(FILE_RECYCLE_PARENT_PREFIX + uid, FILE_RECYCLE_EXPIRATION_TIME - 60, TimeUnit.SECONDS);
+    }
+
 
     public void saveRecycleFile(Long uid, FileInfo fileInfo) {
         redisTemplate.opsForHash().putAll(FILE_RECYCLE_PREFIX + uid + ":" + fileInfo.getId(), BeanUtil.beanToMap(fileInfo));
@@ -321,6 +312,9 @@ public class FileCacheService {
     }
 
     public void deleteRecycleFiles(Long uid, List<Long> fids) {
+        if (fids == null || fids.isEmpty()){
+            return;
+        }
         if (Boolean.TRUE.equals(redisTemplate.hasKey(FILE_RECYCLE_PARENT_PREFIX + uid))){
             redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
                 for (Long fid : fids) {
@@ -333,13 +327,19 @@ public class FileCacheService {
     }
 
 
-    public List<FileInfo> getRecycleFiles(Long uid) {
-        List<Long> ids = redisTemplate.opsForZSet().range(FILE_RECYCLE_PARENT_PREFIX + uid, 0, -1).stream().map(o -> (Long) o).toList();
-        List<FileInfo> fileInfos = ids.stream().map(cacheId -> getRecycleFile(uid, cacheId)).toList();
-        return fileInfos;
+    public List<FileInfo> getAllRecycleFiles(Long uid) {
+        List<Long> ids = Objects.requireNonNull(redisTemplate.opsForZSet().range(FILE_RECYCLE_PARENT_PREFIX + uid, 0, -1)).stream().map(o -> (Long) o).toList();
+        return ids.stream().map(cacheId -> getRecycleFile(uid, cacheId)).toList();
     }
 
-    public boolean existsRecycleChildren(Long uid) {
+    public List<FileInfo> getRecycleFiles(Long uid, List<Long> fids){
+        if (fids == null || fids.isEmpty()){
+            return new ArrayList<>();
+        }
+        return fids.stream().map(cacheId -> getRecycleFile(uid, cacheId)).toList();
+    }
+
+    public Boolean existsRecycleChildren(Long uid) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(FILE_RECYCLE_PARENT_PREFIX + uid));
     }
 
