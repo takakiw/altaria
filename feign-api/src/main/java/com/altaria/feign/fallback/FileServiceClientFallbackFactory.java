@@ -41,6 +41,16 @@ public class FileServiceClientFallbackFactory implements FallbackFactory<FileSer
             public Result saveFileToCloud(SaveShare saveShare) {
                 return Result.error();
             }
+
+            @Override
+            public Result<String> downloadSign(Long id, Long uid) {
+                return Result.error();
+            }
+
+            @Override
+            public Result<String> sign(Long id, Long uid, String category) {
+                return Result.error();
+            }
         };
     }
 }
