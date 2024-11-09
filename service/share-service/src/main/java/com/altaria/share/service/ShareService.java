@@ -10,19 +10,22 @@ import java.util.List;
 public interface ShareService {
     Result<Share> createShareLink(Long userId, Share share);
 
-    List<Share> getShareList(Long userId);
+    List<Share> getShareList(Long userId, Integer category);
 
     Share getShareById(Long shareId);
 
     Result cancelShare(List<Long> shareIds, Long userId);
 
-    void downloadShareFile(Long shareId, Long fid, HttpServletResponse response);
+    Result<String> downloadShareFile(Long shareId, Long fid);
 
     Result<List<FileInfoVO>> getShareListInfo(Long shareId, Long path);
 
-    void previewShareFile(Long shareId, Long fid, HttpServletResponse response);
+    Result<String> previewShareFile(Long shareId, Long fid, String category);
 
     Result<List<FileInfoVO>> getSharePath(Long shareId, Long path);
 
     Result saveToMyCloud(Long shareId, List<Long> fids, Long userId, Long path);
+
+
+    void verifyShareSign(Long shareId, String sign, HttpServletResponse response);
 }

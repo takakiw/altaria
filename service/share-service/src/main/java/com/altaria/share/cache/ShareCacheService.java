@@ -6,10 +6,12 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -22,13 +24,20 @@ public class ShareCacheService {
     private static final long NULL_SHARE_EXPIRE_TIME = 60 * 5;
 
     private static final long USER_SHARE_EXPIRE_TIME = 60 * 60 * 24 * 2; // 7 days
+    private static final long NULL_USER_SHARE_EXPIRE_TIME = 2 * 60 * 60; // 2 hours
+
+    private static final long NULL_USER_SHARE_VALUE = 1000000000000000000L;
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     public Share getShareInfo(Long shareId) {
+        if (shareId == NULL_USER_SHARE_VALUE){
+            return null;
+        }
         return (Share) redisTemplate.opsForValue().get(SHARE_PREFIX + shareId);
     }
 
+    @Async
     public void saveNullShareInfo(Long shareId) {
         Share share = new Share();
         share.setName("null");
@@ -36,57 +45,57 @@ public class ShareCacheService {
     }
 
 
+    @Async
     public void saveShareInfo(Share shareInfo) {
         redisTemplate.opsForValue().set(SHARE_PREFIX + shareInfo.getId(), shareInfo, SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + shareInfo.getUid()))){
+            redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + shareInfo.getUid(), shareInfo.getId(), shareInfo.getCreateTime().toEpochSecond(ZoneOffset.UTC));
+        }
     }
 
-    public void saveShareBatch(List<Share> shareList) {
-        // 批量保存
-        ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
-
-        // 使用 Redis Pipeline
-        redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (Share share : shareList) {
-                String key = SHARE_PREFIX + share.getId();
-                valueOps.set(key, share); // 设置值
-                // 这里是直接使用连接入口来设置过期时间
-                connection.expire(key.getBytes(), SHARE_EXPIRE_TIME); // 设置过期时间
-            }
-            return null; // executePipelined不需要返回结果
-        });
-    }
 
     public List<Share> getUserAllShare(Long userId) {
         if (Boolean.FALSE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId))){
             return null;
         }
-        return redisTemplate.opsForZSet().range(USER_SHARE_PREFIX + userId, 0, -1).stream().map(shareId -> getShareInfo((Long) shareId)).toList();
+        Set<Object> range = redisTemplate.opsForZSet().range(USER_SHARE_PREFIX + userId, 0, -1);
+        if (range != null) {
+            range.remove(NULL_USER_SHARE_VALUE);
+        }
+        if (range != null && range.size() > 0) {
+            return range.stream().map(shareId -> getShareInfo((Long) shareId)).toList();
+        }
+        return null;
     }
 
+    @Async
     public void saveUserAllShare(Long userId, List<Share> shareList) {
         redisTemplate.delete(USER_SHARE_PREFIX + userId);
-        shareList.forEach(share -> redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, share.getId(), share.getCreateTime().toEpochSecond(ZoneOffset.UTC)));
+        shareList.forEach(share -> {
+            redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, share.getId(), share.getCreateTime().toEpochSecond(ZoneOffset.UTC)); // 保存子键
+            redisTemplate.opsForValue().set(SHARE_PREFIX + share.getId(), share, SHARE_EXPIRE_TIME, TimeUnit.SECONDS); // 设置值
+        });
         redisTemplate.expire(USER_SHARE_PREFIX + userId, USER_SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
-        saveShareBatch(shareList);
     }
 
     public Boolean KeyExists(Long userId) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId));
     }
 
+    @Async
     public void deleteShareBatch(List<Share> shareList) {
-        redisTemplate.delete(shareList.stream().map(share -> SHARE_PREFIX + share.getId()).collect(Collectors.toList()));
+        shareList.forEach(share -> {
+            redisTemplate.delete(SHARE_PREFIX + share.getId());
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + share.getUid()))){
+                redisTemplate.opsForZSet().remove(USER_SHARE_PREFIX + share.getUid(), share.getId());
+            }
+        });
     }
 
-    public void deleteUserShare(Long userId, List<Long> realIds) {
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId))){
-            redisTemplate.opsForZSet().remove(USER_SHARE_PREFIX + userId, realIds.toArray());
-        }
-    }
 
-    public void addUserShare(Long userId, Share share) {
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId))){
-            redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, share.getId(), share.getCreateTime().toEpochSecond(ZoneOffset.UTC));
-        }
+    @Async
+    public void saveUserNullChild(Long userId) {
+        redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, NULL_USER_SHARE_VALUE, System.currentTimeMillis());
+        redisTemplate.expire(USER_SHARE_PREFIX + userId, NULL_USER_SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
 }

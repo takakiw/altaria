@@ -42,7 +42,7 @@
             </if>
             and expire > now()
         </where>
-        order by create_time desc
+        order by create_time asc
     </select>
     <select id="getShareById" resultMap="shareResultMap">
         SELECT * FROM share WHERE id = #{shareId} AND expire > NOW()

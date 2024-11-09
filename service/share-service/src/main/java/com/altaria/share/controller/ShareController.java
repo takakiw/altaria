@@ -4,6 +4,7 @@ package com.altaria.share.controller;
 import cn.hutool.core.bean.BeanUtil;
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.enums.StatusCodeEnum;
+import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.SaveShare;
 import com.altaria.common.pojos.file.vo.FileInfoVO;
@@ -33,15 +34,23 @@ public class ShareController {
         return shareService.createShareLink(userId, share);
     }
 
+    // 验证分享密码
+    @GetMapping("/sign/{shareId}")
+    public void verifyShareSign(@PathVariable("shareId") Long shareId,
+                                               HttpServletResponse response,
+                                               @RequestParam(value = "sign", required = false) String sign) {
+        shareService.verifyShareSign(shareId, sign, response);
+    }
+
     //  获取分享链接信息列表
     @GetMapping("/urlList")
-    public Result<List<ShareVO>> getShareListInfo(@RequestHeader(UserConstants.USER_ID) Long userId){
+    public Result<PageResult<Share>> getShareListInfo(@RequestHeader(UserConstants.USER_ID) Long userId,
+                                                      @RequestParam(value = "category", defaultValue = "0", required = false) Integer category){
         if (userId == null){
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
-        List<Share> shareList = shareService.getShareList(userId);
-        List<ShareVO> shareVOS = BeanUtil.copyToList(shareList, ShareVO.class);
-        return Result.success(shareVOS);
+        List<Share> shareList = shareService.getShareList(userId, category);
+        return Result.success(new PageResult<>(shareList.size(), shareList));
     }
 
     //  取消分享
@@ -78,26 +87,28 @@ public class ShareController {
         return shareService.getShareListInfo(shareId, path);
     }
 
+    // todo 获取分享链接信息（笔记列表）
+
     // 获取分享的当前文件路径
-    @GetMapping("/path/{shareId}/{path}")
-    public Result<List<FileInfoVO>> getSharePath(@PathVariable("shareId") Long shareId, @PathVariable("path") Long path){
+    @GetMapping("/path/{shareId}")
+    public Result<List<FileInfoVO>> getSharePath(@PathVariable("shareId") Long shareId, @RequestParam(value = "path", required = false) Long path){
         return shareService.getSharePath(shareId, path);
     }
 
 
     // 下载分享文件（直接下载并统计下载次数）
     @GetMapping("/download/{shareId}/{fid}")
-    public void downloadShareFile(@PathVariable("shareId") Long shareId,
-                                  @PathVariable("fid") Long fid,
-                                  HttpServletResponse response){
-        shareService.downloadShareFile(shareId, fid, response);
+    public Result<String> downloadShareFile(@PathVariable("shareId") Long shareId,
+                                  @PathVariable("fid") Long fid){
+        return shareService.downloadShareFile(shareId, fid);
     }
+
 
     // 预览分享文件
     @GetMapping("/preview/{shareId}/{fid}")
-    public void previewShareFile(@PathVariable("shareId") Long shareId,
-                                 @PathVariable("fid") Long fid,
-                                 HttpServletResponse response){
-        shareService.previewShareFile(shareId, fid, response);
+    public Result<String> previewShareFile(@PathVariable("shareId") Long shareId,
+                                           @PathVariable("fid") Long fid,
+                                           @RequestParam(value = "category", required = false) String category){
+        return shareService.previewShareFile(shareId, fid, category);
     }
 }

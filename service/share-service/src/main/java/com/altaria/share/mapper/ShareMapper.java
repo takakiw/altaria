@@ -1,10 +1,7 @@
 package com.altaria.share.mapper;
 
 import com.altaria.common.pojos.share.entity.Share;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
@@ -25,4 +22,7 @@ public interface ShareMapper {
 
     @Select("SELECT * FROM share WHERE expire < NOW()")
     List<Share> getExpiredShare();
+
+    @Update("UPDATE share SET visit = visit + 1 where id = #{shareId}")
+    void incrementVisit(@Param("shareId") Long shareId);
 }

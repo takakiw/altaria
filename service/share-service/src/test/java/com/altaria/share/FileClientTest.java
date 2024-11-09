@@ -39,4 +39,9 @@ public class FileClientTest {
         redisTemplate.opsForZSet().range("user-share:5", 0, -1).forEach(System.out::println);
     }
 
+    @Test
+    public void testd2() {
+        System.out.println(redisTemplate.opsForZSet().remove("adwqsca", "a"));
+    }
+
 }
