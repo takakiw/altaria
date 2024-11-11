@@ -1,10 +1,19 @@
+server:
+  port: 8085
 spring:
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/note_service?useSSL=false
-    username: root
-    password: qq123321
-
-mybatis:
-  configuration:
-    map-underscore-to-camel-case: true
+  application:
+    name: note-service
+  config:
+    import: nacos:note-service-space, nacos:rabbit-config
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.96.132:8848
+        username: nacos
+        password: nacos
+      config:
+        server-addr: 192.168.96.132:8848
+        file-extension: yaml
+        username: nacos
+        password: nacos
+      server-addr: 192.168.96.132:8848

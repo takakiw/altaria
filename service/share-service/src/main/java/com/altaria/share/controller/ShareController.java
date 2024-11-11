@@ -44,12 +44,11 @@ public class ShareController {
 
     //  获取分享链接信息列表
     @GetMapping("/urlList")
-    public Result<PageResult<Share>> getShareListInfo(@RequestHeader(UserConstants.USER_ID) Long userId,
-                                                      @RequestParam(value = "category", defaultValue = "0", required = false) Integer category){
+    public Result<PageResult<Share>> getShareListInfo(@RequestHeader(UserConstants.USER_ID) Long userId){
         if (userId == null){
             return Result.error(StatusCodeEnum.UNAUTHORIZED);
         }
-        List<Share> shareList = shareService.getShareList(userId, category);
+        List<Share> shareList = shareService.getShareList(userId);
         return Result.success(new PageResult<>(shareList.size(), shareList));
     }
 

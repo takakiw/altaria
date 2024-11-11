@@ -21,10 +21,17 @@
         <module>user-service</module>
         <module>note-service</module>
         <module>file-service</module>
-        <module>chat-service</module>
-        <module>groups-service</module>
         <module>share-service</module>
         <module>space-service</module>
     </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

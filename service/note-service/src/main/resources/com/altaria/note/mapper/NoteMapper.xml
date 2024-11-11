@@ -24,7 +24,7 @@
                 update_time = #{updateTime}
             </if>
         </set>
-        WHERE id = #{id}
+        WHERE id = #{id} and uid = #{uid}
     </update>
     <select id="selectNote" resultType="com.altaria.common.pojos.note.entity.Note">
         select * from note
@@ -37,6 +37,9 @@
             </if>
             <if test="cid!= null">
                 and cid = #{cid}
+            </if>
+            <if test="cid == null">
+                and cid is null
             </if>
             <if test="title != null">
                 and title like concat('%',#{title},'%')

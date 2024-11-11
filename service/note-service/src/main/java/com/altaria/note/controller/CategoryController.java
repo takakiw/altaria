@@ -9,7 +9,7 @@ import com.altaria.note.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-@RequestMapping("/note/class")
+@RequestMapping("/note/category")
 @RestController
 public class CategoryController {
 

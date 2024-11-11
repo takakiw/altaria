@@ -11,6 +11,8 @@ import com.altaria.note.service.NoteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RequestMapping("/note")
 @RestController
 public class NoteController {
@@ -25,6 +27,7 @@ public class NoteController {
         return noteService.getNoteList(category, uid);
     }
 
+    // 获取笔记详情
     @GetMapping("/{id}")
     private Result<NoteVO> getNote(@PathVariable("id") Long id,
                                    @RequestHeader(UserConstants.USER_ID) Long uid) {
@@ -52,4 +55,11 @@ public class NoteController {
                               @RequestHeader(UserConstants.USER_ID) Long uid) {
         return noteService.deleteNote(id, uid);
     }
+
+    // 获取所有公开的笔记
+    @GetMapping("/shareList")
+    private Result<List<NoteListVO>> getShareSign(@RequestHeader(UserConstants.USER_ID) Long uid) {
+        return noteService.getShareList(uid);
+    }
+
 }
