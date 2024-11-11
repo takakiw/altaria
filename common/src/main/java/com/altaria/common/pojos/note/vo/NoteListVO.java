@@ -7,8 +7,9 @@ import java.time.LocalDateTime;
 @Data
 public class NoteListVO {
     private Long id;
-    private Long uid;
     private String title;
+    private Integer commentCount;
+    private Boolean isPrivate;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

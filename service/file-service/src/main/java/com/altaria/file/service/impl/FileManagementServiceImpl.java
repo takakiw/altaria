@@ -25,6 +25,7 @@ import com.altaria.minio.service.MinioService;
 import com.altaria.redis.CheckConnection;
 import com.github.pagehelper.Page;
 import io.seata.spring.annotation.GlobalTransactional;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -633,6 +634,9 @@ public class FileManagementServiceImpl implements FileManagementService {
     }
 
 
+    @Autowired
+    private HttpServletRequest request;
+
     @Override
     public void download(HttpServletResponse response, Long id, Long uid, Long expire, String sign) {
         if (id == null || uid == null) {
@@ -719,8 +723,7 @@ public class FileManagementServiceImpl implements FileManagementService {
         return Result.success();
     }
 
-    @GlobalTransactional
-    @Transactional(rollbackFor = Exception.class)
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Override
     public Result removeFile(List<Long> ids, Long uid) {
         if (ids == null || uid == null) {
@@ -856,14 +859,14 @@ public class FileManagementServiceImpl implements FileManagementService {
                 return Result.error(StatusCodeEnum.DIRECTORY_NOT_EXISTS);
             }
         }
+        SpaceVO usedSpace = spaceServiceClient.space(uid).getData();
         File tempDir = null;
         if (index == 0) {
             List<FileInfo> fileByMd5s = fileInfoMapper.getFileByMd5(md5);
             if (fileByMd5s != null && !fileByMd5s.isEmpty()) {
                 FileInfo fileByMd5 = fileByMd5s.get(0);
-                SpaceVO space = spaceServiceClient.space(uid).getData();
-                log.error(space.toString());
-                if (fileByMd5.getSize() + space.getUseSpace() > space.getTotalSpace()) {
+                log.error(usedSpace.toString());
+                if (fileByMd5.getSize() + usedSpace.getUseSpace() > usedSpace.getTotalSpace()) {
                     log.error("秒传失败，空间不足");
                     return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
                 }
@@ -886,7 +889,6 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
 
         // 0 ~ n - 1分片处理
-        SpaceVO usedSpace = spaceServiceClient.space(uid).getData();
         cacheService.updateUploadFileSize(fid, size);
         long uploadFileSize = cacheService.getUploadFileSize(fid);
         try {
@@ -969,6 +971,8 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
             throw new BaseException("文件上传失败");
         } catch (Exception e) {
+            cacheService.deleteFile(saveFile.getUid(), saveFile.getId());
+            cacheService.deleteChildren(saveFile.getUid(), saveFile.getPid(), saveFile.getId());
             throw new BaseException(e.getMessage());
         }finally {
             try {

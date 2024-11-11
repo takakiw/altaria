@@ -169,8 +169,9 @@ public class MinioServiceImpl implements MinioService {
             return;
         }
         // 设置响应头
-        response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
-        response.setHeader("Content-Length", String.valueOf(statObject.size()));
+        response.setContentType("application/x-msdownload; character=UTF-8"); // 设置response的类型为文件流
+        response.setHeader("Content-Disposition", "attachment;filename=" + fileName); // 设置响应头
+        //response.setHeader("Content-Length", String.valueOf(statObject.size()));
         response.setContentType(statObject.contentType()); // 根据文件格式设置
         response.setCharacterEncoding("utf-8");
 

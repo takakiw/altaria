@@ -17,7 +17,3 @@ spring:
         username: nacos
         password: nacos
       server-addr: 192.168.96.132:8848
-
-file:
-  share:
-    url: http://localhost:9000/shareDetail/

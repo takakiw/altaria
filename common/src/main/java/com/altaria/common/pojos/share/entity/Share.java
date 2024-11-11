@@ -12,8 +12,6 @@ public class Share {
     private Long uid;
     private String name;
     @NotNull
-    private Integer type;
-    @NotNull
     private List<Long> fids;
     private Long visit;
     @NotNull

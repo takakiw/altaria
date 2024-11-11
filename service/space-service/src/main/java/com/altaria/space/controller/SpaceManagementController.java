@@ -8,7 +8,9 @@ import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.space.entity.Space;
 import com.altaria.common.pojos.space.vo.SpaceVO;
 
+import com.altaria.rabbitmq.config.RabbitConfig;
 import com.altaria.space.service.SpaceManagementService;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

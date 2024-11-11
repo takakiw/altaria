@@ -6,7 +6,6 @@
         <id property="id" column="id" />
         <result property="uid" column="uid" />
         <result property="name" column="name" />
-        <result property="type" column="type" />
         <result property="fids" column="fids" typeHandler="com.altaria.share.handler.LongListTypeHandler" />
         <result property="visit" column="visit"/>
         <result property="expire" column="expire" />
@@ -17,8 +16,8 @@
 
 
     <insert id="insert" keyProperty="id" useGeneratedKeys="true">
-        INSERT INTO share (id, uid, name, type, fids, expire, url, sign)
-        values (#{id}, #{uid}, #{name}, #{type}, #{fids,typeHandler=com.altaria.share.handler.LongListTypeHandler}, #{expire}, #{url}, #{sign})
+        INSERT INTO share (id, uid, name, fids, expire, url, sign)
+        values (#{id}, #{uid}, #{name}, #{fids,typeHandler=com.altaria.share.handler.LongListTypeHandler}, #{expire}, #{url}, #{sign})
     </insert>
     <delete id="deleteByIds">
         DELETE FROM share

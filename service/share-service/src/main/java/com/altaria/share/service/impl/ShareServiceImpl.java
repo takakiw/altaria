@@ -75,7 +75,6 @@ public class ShareServiceImpl implements ShareService {
         dbShare.setUid(userId);
         dbShare.setExpire(share.getExpire());
         String url = shareUrl + dbShare.getId();
-        dbShare.setType(ShareConstants.TYPE_FILE); // 暂时只支持文件分享， 后续支持笔记分享
         dbShare.setUrl(url);
         if(StringUtils.isNotBlank(share.getSign()) && share.getSign().length() == 4){
             dbShare.setSign(share.getSign());
@@ -93,13 +92,13 @@ public class ShareServiceImpl implements ShareService {
     }
 
     @Override
-    public List<Share> getShareList(Long userId, Integer category) {
+    public List<Share> getShareList(Long userId) {
         if (Boolean.TRUE.equals(cacheService.KeyExists(userId))){
             List<Share> userAllShare = cacheService.getUserAllShare(userId);
             if (userAllShare == null || userAllShare.size() == 0){
                 return new ArrayList<>();
             }
-            List<Share> shares = userAllShare.stream().filter(share -> share != null && share.getUid() != null && Objects.equals(share.getType(), category) && share.getExpire().isAfter(LocalDateTime.now())).toList();
+            List<Share> shares = userAllShare.stream().filter(share -> share != null && share.getUid() != null && share.getExpire().isAfter(LocalDateTime.now())).toList();
             List<Share> expiredShare = userAllShare.stream().filter(share -> share.getExpire().isBefore(LocalDateTime.now())).toList();
             if (expiredShare.size() > 0){
                 CompletableFuture.supplyAsync(() -> { // 异步删除过期分享
@@ -118,7 +117,6 @@ public class ShareServiceImpl implements ShareService {
                 return new ArrayList<>();
             }
             cacheService.saveUserAllShare(userId, shareList);
-            shareList = shareList.stream().filter(s -> Objects.equals(s.getType(), category)).toList();
             return shareList.stream().filter(s -> s.getExpire().isAfter(LocalDateTime.now())).toList();
         }
     }
@@ -379,10 +377,6 @@ public class ShareServiceImpl implements ShareService {
         // 不能保存自己分享的文件
         if(share.getUid().compareTo(userId) == 0){
             return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
-        }
-        // 判断分享类型
-        if (share.getType() != ShareConstants.TYPE_FILE){
-            return Result.error(StatusCodeEnum.ONLY_FILE_SAVED); // 暂时只支持文件分享保存
         }
         // 获取分享目录的路径
         Result<List<FileInfo>> fileInfos = fileServiceClient.getFileInfos(fids, share.getUid());

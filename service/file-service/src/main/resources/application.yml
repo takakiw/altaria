@@ -1,13 +1,8 @@
 server:
   port: 8082
-
 spring:
   application:
     name: file-service
-  servlet:
-    multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
   config:
     import: nacos:file-service-space, nacos:rabbit-config, nacos:seata-config
   cloud:
@@ -23,16 +18,7 @@ spring:
         password: nacos
       server-addr: 192.168.96.132:8848
     openfeign:
-      circuitbreaker: # 熔断器配置
-        enabled: true
       httpclient:
         enabled: true
         max-connections: 1000 # 最大连接数
         connection-timeout: 3000 # 连接超时时间
-
-
-temp:
-  file:
-    path: "D:\\zhawu\\temp\\"
-
-

@@ -10,7 +10,7 @@ import java.util.List;
 public interface ShareService {
     Result<Share> createShareLink(Long userId, Share share);
 
-    List<Share> getShareList(Long userId, Integer category);
+    List<Share> getShareList(Long userId);
 
     Share getShareById(Long shareId);
 

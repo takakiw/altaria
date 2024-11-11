@@ -11,6 +11,7 @@ public class Note {
     private Long cid;
     private String title;
     private String text;
+    private Integer commentCount;
     private Boolean isPrivate;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

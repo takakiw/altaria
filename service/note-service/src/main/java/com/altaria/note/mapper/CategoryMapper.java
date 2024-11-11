@@ -7,7 +7,7 @@ import java.util.List;
 
 @Mapper
 public interface CategoryMapper {
-    @Select("SELECT * FROM category WHERE id = #{cid}")
+    @Select("SELECT * FROM category WHERE id = #{cid} AND uid = #{uid}")
     Category getCategoryById(@Param("cid") Long cid, @Param("uid") Long uid);
 
     @Select("SELECT * FROM category WHERE name = #{category} AND uid = #{uid}")

@@ -39,4 +39,9 @@ public class RabbitConfig {
     public Queue deleteRecycleQueue() {
         return new Queue("recycle-delete-queue");
     }
+
+    @Bean
+    public Queue updateNoteCountQueue() {
+        return new Queue("update-note-count-queue");
+    }
 }
