@@ -13,6 +13,7 @@
         <option value="$PROJECT_DIR$/ai-service/pom.xml" />
         <option value="$PROJECT_DIR$/component/exception/pom.xml" />
         <option value="$PROJECT_DIR$/model/pom.xml" />
+        <option value="$PROJECT_DIR$/service/chat-service/pom.xml" />
         <option value="$PROJECT_DIR$/share-service/pom.xml" />
       </set>
     </option>

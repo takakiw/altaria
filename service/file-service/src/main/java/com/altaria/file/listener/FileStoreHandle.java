@@ -1,5 +1,6 @@
 package com.altaria.file.listener;
 
+import cn.hutool.crypto.digest.DigestUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.altaria.common.constants.FileConstants;
 import com.altaria.common.constants.MinioConstants;
@@ -126,7 +127,15 @@ public class FileStoreHandle {
                 }
             }
             writeFile.close();
-            // 合并完成在toPath中, 开始转码
+            // 判断文件完整性
+            String localMd5 = DigestUtil.md5Hex(data);
+            if (!StringUtils.equals(md5, localMd5)){
+                log.error("文件MD5校验失败, 文件id: {},用户id: {}", dbId, uid);
+                fileInfoMapper.updateURLAndCoverByMd5(null, null, md5, FileConstants.TRANSFORMED_ERROR);
+                cacheService.updateFileTransformed(uid, dbId, FileConstants.TRANSFORMED_ERROR);
+                return;
+            }
+            // 完整合并完成在data中, 开始转码
             Integer type = FileType.getFileType(contentType).getType();
             try {
                 if (type.compareTo(FileType.VIDEO.getType()) == 0){ // 转码视频
