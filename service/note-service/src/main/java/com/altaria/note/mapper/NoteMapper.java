@@ -1,10 +1,8 @@
 package com.altaria.note.mapper;
 
 import com.altaria.common.pojos.note.entity.Note;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import com.altaria.common.pojos.note.entity.NoteInfo;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
@@ -12,8 +10,8 @@ import java.util.List;
 public interface NoteMapper {
     int saveNote(Note note);
 
-    @Select("SELECT * FROM note WHERE id = #{id} AND uid = #{uid}")
-    Note getNoteById(@Param("id") Long id, @Param("uid") Long uid);
+    @Select("SELECT * FROM note WHERE id = #{id}")
+    Note getNoteById(@Param("id") Long id);
 
     int updateNote(Note note);
 
@@ -24,4 +22,10 @@ public interface NoteMapper {
 
     @Delete("DELETE FROM note WHERE cid = #{cid} AND uid = #{uid}")
     void deleteNoteByCategory(@Param("cid") Long id, @Param("uid") Long uid);
+
+
+    List<NoteInfo> getPublicNoteInfo(@Param("uid") Long uid);
+
+    @Update("UPDATE note SET comment_count = comment_count + #{i} WHERE id = #{nid}")
+    void incrCommentCount(@Param("nid") Long nid, @Param("i") int i);
 }

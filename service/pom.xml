@@ -23,6 +23,7 @@
         <module>file-service</module>
         <module>share-service</module>
         <module>space-service</module>
+        <module>preview-service</module>
     </modules>
 
     <build>

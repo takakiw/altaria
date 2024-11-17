@@ -15,6 +15,7 @@ import com.altaria.common.pojos.file.entity.SaveShare;
 import com.altaria.common.pojos.file.vo.FileInfoVO;
 import com.altaria.common.pojos.share.entity.Share;
 import com.altaria.feign.client.FileServiceClient;
+import com.altaria.feign.client.PreviewServiceClient;
 import com.altaria.share.cache.ShareCacheService;
 import com.altaria.share.mapper.ShareMapper;
 import com.altaria.share.service.ShareService;
@@ -46,6 +47,9 @@ public class ShareServiceImpl implements ShareService {
 
     @Autowired
     private FileServiceClient fileServiceClient;
+
+    @Autowired
+    private PreviewServiceClient previewServiceClient;
 
     @Autowired
     private ShareCacheService cacheService;
@@ -241,7 +245,7 @@ public class ShareServiceImpl implements ShareService {
         if (fileInfo.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
             return Result.error(StatusCodeEnum.FILE_CANNOT_PREVIEW);
         }
-        return fileServiceClient.sign(fileInfo.getId(), shareInfo.getUid(), category);
+        return previewServiceClient.sign(fileInfo.getId(), shareInfo.getUid(), category);
     }
 
     @CheckCookie

@@ -24,7 +24,7 @@ public class CategoryController {
 
 
     @PostMapping("/add")
-    public Result addCategory(@RequestBody Category category,
+    public Result<Category> addCategory(@RequestBody Category category,
                               @RequestHeader(UserConstants.USER_ID) Long uid) {
         return categoryService.addCategory(category.getName(), uid);
     }
@@ -36,7 +36,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/delete/{category}")
-    public Result deleteCategory(@PathVariable("category") String category,
+    public Result deleteCategory(@PathVariable("category") Long category,
                                 @RequestHeader(UserConstants.USER_ID) Long uid) {
         return categoryService.deleteCategory(category, uid);
     }

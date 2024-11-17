@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class NoteDTO {
     private Long id;
-    private String categoryName;
+    private Long cid;
     private String title;
     private String text;
     private Boolean isPrivate;

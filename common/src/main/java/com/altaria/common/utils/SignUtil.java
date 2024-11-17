@@ -11,9 +11,9 @@ public class SignUtil {
 
     private static final String secretKey = "takaki";
 
-    public static String sign(long uid, long id, long expire){
+    public static String sign(long uid, String url, long expire){
         try {
-            String data = uid + ":" + id  + ":" + expire;
+            String data = uid + ":" + url  + ":" + expire;
             Mac hmacSHA256 = Mac.getInstance("HmacSHA256");
             SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             hmacSHA256.init(secretKeySpec);
@@ -24,10 +24,10 @@ public class SignUtil {
         }
     }
 
-    public static boolean checkSign(long uid, long id, long expire, String sign){
+    public static boolean checkSign(long uid, String url, long expire, String sign){
         try{
             if(Long.compare(expire, System.currentTimeMillis()) != -1){
-                String newSign = sign(uid, id, expire);
+                String newSign = sign(uid, url, expire);
                 return newSign.equals(sign);
             }
         }catch (Exception e){

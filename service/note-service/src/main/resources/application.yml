@@ -17,3 +17,7 @@ spring:
         username: nacos
         password: nacos
       server-addr: 192.168.96.132:8848
+
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
