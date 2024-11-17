@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.altaria.note.mapper.CommentMapper">
+
+    <resultMap id="commentInfoResultMap" type="com.altaria.common.pojos.note.entity.CommentInfo">
+        <id property="id" column="id"/>
+        <result property="nid" column="nid"/>
+        <result property="uid" column="uid"/>
+        <result property="content" column="content"/>
+        <result property="pid" column="pid"/>
+        <result property="toId" column="to_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="avatar" column="avatar"/>
+        <!-- 子评论集合映射 -->
+        <collection property="childrenComment" ofType="com.altaria.common.pojos.note.entity.CommentInfo">
+            <id property="id" column="child_id"/>
+            <result property="nid" column="child_nid"/>
+            <result property="pid" column="child_pid"/>
+            <result property="uid" column="child_uid"/>
+            <result property="content" column="child_content"/>
+            <result property="toId" column="child_to_id"/>
+            <result property="createTime" column="child_create_time"/>
+            <result property="nickName" column="child_nick_name"/>
+            <result property="avatar" column="child_avatar"/>
+        </collection>
+    </resultMap>
+
+    <!-- 查询顶级评论和子评论 -->
+    <select id="list" resultMap="commentInfoResultMap">
+        SELECT
+            c.id , c.nid, c.uid, c.content, c.pid, c.to_id, c.create_time,
+            u.nick_name, u.avatar,
+            child.id AS child_id, child.uid AS child_uid, child.content AS child_content,
+            child.to_id AS child_to_id, child.create_time AS child_create_time,
+            child_u.nick_name AS child_nick_name, child_u.avatar AS child_avatar, child.pid AS child_pid, child.nid AS child_nid
+        FROM comments c
+                 LEFT JOIN tb_user u ON c.uid = u.id
+                 LEFT JOIN comments child ON child.pid = c.id
+                 LEFT JOIN tb_user child_u ON child.uid = child_u.id
+        WHERE c.nid = #{nid} AND c.pid IS NULL
+        ORDER BY c.create_time, child.create_time;
+    </select>
+</mapper>

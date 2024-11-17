@@ -1,10 +1,11 @@
 server:
-  port: 8085
+  port: 8086
+
 spring:
   application:
-    name: note-service
+    name: preview-service
   config:
-    import: nacos:note-service-space, nacos:rabbit-config
+    import: nacos:preview-service-space
   cloud:
     nacos:
       discovery:
@@ -17,7 +18,3 @@ spring:
         username: nacos
         password: nacos
       server-addr: 192.168.96.132:8848
-
-mybatis:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

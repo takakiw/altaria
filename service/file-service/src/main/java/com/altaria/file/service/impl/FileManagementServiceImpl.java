@@ -1,6 +1,5 @@
 package com.altaria.file.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -42,9 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +74,9 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     @Value("${temp.file.path:/temp/file/}")
     private String tempPath;
+
+    @Value("${api.download:/file/file/download/}")
+    private String apiDownload;
 
 
     @Autowired
@@ -209,8 +209,8 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.error(StatusCodeEnum.FILE_TRANSCODING);
         }
         long expire = System.currentTimeMillis() +  60 * 60 * 8; // 8小时过期
-        String sign = SignUtil.sign(uid, id, expire);
-        return Result.success("/file/file/download/" + id + "?expire=" + expire + "&uid=" + uid + "&sign=" + sign);
+        String sign = SignUtil.sign(uid, file.getUrl(), expire);
+        return Result.success(apiDownload + file.getUrl() + "?expire=" + expire + "&uid=" + uid + "&sign=" + sign);
     }
 
     @Override
@@ -229,6 +229,21 @@ public class FileManagementServiceImpl implements FileManagementService {
         }
         return Result.success();
     }
+
+    @Override
+    public Result<FileInfo> getFileInfo(Long id, Long uid) {
+        FileInfo file = cacheService.getFile(uid, id);
+        if (file == null){
+            file = fileInfoMapper.getFileById(id, uid);
+            if (file == null){
+                cacheService.saveNullFile(uid, id);
+                return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
+            }
+            cacheService.saveFile(file);
+        }
+        return Result.success(file);
+    }
+
 
 
     @Override
@@ -638,35 +653,17 @@ public class FileManagementServiceImpl implements FileManagementService {
     private HttpServletRequest request;
 
     @Override
-    public void download(HttpServletResponse response, Long id, Long uid, Long expire, String sign) {
-        if (id == null || uid == null) {
+    public void download(HttpServletResponse response, String url, Long uid, Long expire, String sign) {
+        if (url == null || uid == null) {
             writerResponse(response, StatusCodeEnum.PARAM_NOT_NULL);
             return;
         }
-        boolean checkSign = SignUtil.checkSign(uid, id, expire, sign);
+        boolean checkSign = SignUtil.checkSign(uid, url, expire, sign);
         if (!checkSign) {
             writerResponse(response, StatusCodeEnum.PARAM_ERROR);
             return;
         }
-        FileInfo file = cacheService.getFile(uid, id);
-        if (file == null){
-            file = fileInfoMapper.getFileById(id, uid);
-            if (file == null){
-                cacheService.saveNullFile(uid, id);
-                writerResponse(response, StatusCodeEnum.FILE_NOT_EXISTS);
-                return;
-            }
-            cacheService.saveFile(file);
-        }
-        if (file.getId() == null || file.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
-            writerResponse(response, StatusCodeEnum.ILLEGAL_REQUEST); // 文件不能下载
-        }
-        if (file.getUrl() == null || file.getTransformed() != FileConstants.TRANSFORMED_END){
-            log.info("download: {}", id);
-            writerResponse(response, StatusCodeEnum.FILE_TRANSCODING);
-            return;
-        }
-        minioService.downloadFile(file.getUrl(), response);
+        minioService.downloadFile(url, response);
     }
 
     @Override

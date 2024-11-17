@@ -1,18 +1,18 @@
-package com.altaria.common.pojos.note.vo;
+package com.altaria.common.pojos.note.entity;
 
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-public class NoteVO {
+public class NoteInfo {
     private Long id;
-    private Long cid;
+    private Long uid;
+    private String category;
     private String title;
     private String text;
     private Integer commentCount;
     private Boolean isPrivate;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
-    private Long uid;
 }

@@ -86,8 +86,6 @@ public class ShareController {
         return shareService.getShareListInfo(shareId, path);
     }
 
-    // todo 获取分享链接信息（笔记列表）
-
     // 获取分享的当前文件路径
     @GetMapping("/path/{shareId}")
     public Result<List<FileInfoVO>> getSharePath(@PathVariable("shareId") Long shareId, @RequestParam(value = "path", required = false) Long path){

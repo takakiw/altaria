@@ -1,9 +1,9 @@
-package com.altaria.file.controller;
+package com.altaria.preview.controller;
 
 
 import com.altaria.common.constants.UserConstants;
 import com.altaria.common.pojos.common.Result;
-import com.altaria.file.service.FilePreviewService;
+import com.altaria.preview.service.FilePreviewService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,47 +34,47 @@ public class FilePreviewController {
     /**
      *  preview文件
      * @param response
-     * @param id
+     * @param url
      * @param uid
      */
-    @GetMapping("/file/{id}")
+    @GetMapping("/file/{url}")
     public void preview(HttpServletResponse response,
-                        @PathVariable("id") Long id,
+                        @PathVariable("url") String url,
                         @RequestParam(value = "uid", required = false) Long uid,
                         @RequestParam(value = "expire", required = false) Long expire,
                         @RequestParam(value = "sign", required = false) String sign) {
-        filePreviewService.preview(response, id, uid, expire, sign);
+        filePreviewService.preview(response, url, uid, expire, sign);
     }
 
     /**
      * preview视频
      * @param response
      * @param request
-     * @param id
+     * @param url
      * @param sign
      */
-    @GetMapping("/video/{id}")
+    @GetMapping("/video/{url}")
     public void video(HttpServletResponse response,
                       HttpServletRequest request,
-                      @PathVariable("id") Long id,
+                      @PathVariable("url") String url,
                       @RequestParam("uid") Long uid,
                       @RequestParam("expire") Long expire,
                       @RequestParam("sign") String sign) {
-        filePreviewService.previewVideo(request,response, id, uid, expire, sign);
+        filePreviewService.previewVideo(request,response, url, uid, expire, sign);
     }
 
     /**
      * preview封面
      * @param response
-     * @param id
+     * @param url
      * @param uid
      */
-    @GetMapping("/cover/{id}")
+    @GetMapping("/cover/{url}")
     public void cover(HttpServletResponse response,
-                      @PathVariable("id") Long id,
+                      @PathVariable("url") String url,
                       @RequestParam(value = "uid", required = false) Long uid,
                       @RequestParam(value = "expire", required = false) Long expire,
                       @RequestParam(value = "sign", required = false) String sign) {
-        filePreviewService.previewCover(response, id, uid, expire, sign);
+        filePreviewService.previewCover(response, url, uid, expire, sign);
     }
 }

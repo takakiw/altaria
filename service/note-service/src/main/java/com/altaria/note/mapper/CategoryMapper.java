@@ -18,7 +18,7 @@ public interface CategoryMapper {
     @Update("UPDATE category SET name = #{name} WHERE id = #{id} AND uid = #{uid}")
     int updateCategory(Category dbCategory);
 
-    @Select("SELECT * FROM category WHERE uid = #{uid}")
+    @Select("SELECT * FROM category WHERE uid = #{uid} order by name")
     List<Category> listCategories(@Param("uid") Long uid);
 
     @Delete("DELETE FROM category WHERE id = #{id}")

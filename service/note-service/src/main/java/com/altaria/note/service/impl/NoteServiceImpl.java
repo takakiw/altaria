@@ -8,9 +8,10 @@ import com.altaria.common.pojos.common.PageResult;
 import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.note.entity.Note;
 import com.altaria.common.pojos.note.entity.Category;
+import com.altaria.common.pojos.note.entity.NoteInfo;
 import com.altaria.common.pojos.note.vo.NoteListVO;
 import com.altaria.common.pojos.note.vo.NoteVO;
-import com.altaria.common.utils.SignUtil;
+import com.altaria.note.cache.NoteCacheService;
 import com.altaria.note.mapper.CategoryMapper;
 import com.altaria.note.mapper.CommentMapper;
 import com.altaria.note.mapper.NoteMapper;
@@ -18,13 +19,12 @@ import com.altaria.note.service.NoteService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class NoteServiceImpl implements NoteService {
@@ -41,10 +41,13 @@ public class NoteServiceImpl implements NoteService {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private NoteCacheService cacheService;
+
 
 
     @Override
-    public Result createNote(String title, String text, Boolean isPrivate, String categoryName, Long uid) {
+    public Result createNote(String title, String text, Boolean isPrivate, Long cid, Long uid) {
         if (uid == null){
             return Result.error(StatusCodeEnum.TOKEN_INVALID);
         }
@@ -53,48 +56,73 @@ public class NoteServiceImpl implements NoteService {
         }
         isPrivate = Boolean.TRUE.equals(isPrivate) ? Boolean.TRUE : Boolean.FALSE;
         Note dbNote = new Note();
-        dbNote.setId(IdUtil.getSnowflake().nextId());
+        long nid = IdUtil.getSnowflake().nextId();
+        dbNote.setId(nid);
         dbNote.setUid(uid);
         dbNote.setTitle(title);
         dbNote.setText(text);
         dbNote.setIsPrivate(isPrivate);
-        if (categoryName != null){
-            Category category = categoryMapper.getCategoryByNames(categoryName, uid);
+        dbNote.setCommentCount(0);
+        if (cid != null){
+            Category category = cacheService.getCategory(uid, cid);
             if (category == null){
-                return Result.error(StatusCodeEnum.CATEGORY_NOT_FOUND);
+                category = categoryMapper.getCategoryById(cid, uid);
+                if (category == null){
+                    return Result.error(StatusCodeEnum.CATEGORY_NOT_FOUND);
+                }
+                cacheService.saveCategory(category);
             }
             dbNote.setCid(category.getId());
         }
         int i = noteMapper.saveNote(dbNote);
         if (i > 0){
             rabbitTemplate.convertAndSend("update-note-count-queue", uid+ ":" + 1);
+            dbNote.setUpdateTime(LocalDateTime.now());
+            dbNote.setUpdateTime(LocalDateTime.now());
+            cacheService.addCategoryChildren(dbNote);
             return Result.success();
         }
         return Result.error(StatusCodeEnum.CREATE_NOTE_FAILED);
     }
 
     @Override
-    public Result updateNote(Long id, String title, String text, Boolean isPrivate, String categoryName, Long uid) {
+    public Result updateNote(Long id, String title, String text, Boolean isPrivate, Long cid, Long uid) {
         if (uid == null){
             return Result.error(StatusCodeEnum.TOKEN_INVALID);
         }
-        Note noteById = noteMapper.getNoteById(id, uid);
-        if (noteById == null){
+        Note note = cacheService.getNote(id);
+        if (note == null){
+            note = noteMapper.getNoteById(id);
+            if (note == null){
+                return Result.error(StatusCodeEnum.NOTE_NOT_FOUND);
+            }
+            cacheService.saveNote(note);
+        }
+        if (note.getId() == null || note.getUid() != uid){
             return Result.error(StatusCodeEnum.NOTE_NOT_FOUND);
         }
-        if (categoryName != null){
-            Category category = categoryMapper.getCategoryByNames(categoryName, uid);
+        boolean updateCategory = note.getCid() != cid;
+        if (cid != null){
+            Category category = cacheService.getCategory(uid, cid);
             if (category == null){
-                return Result.error(StatusCodeEnum.CATEGORY_NOT_FOUND);
+                category = categoryMapper.getCategoryById(cid, uid);
+                if (category == null){
+                    return Result.error(StatusCodeEnum.CATEGORY_NOT_FOUND);
+                }
+                cacheService.saveCategory(category);
             }
-            noteById.setCid(category.getId());
+            note.setCid(category.getId());
         }
-        noteById.setTitle(title);
-        noteById.setText(text);
-        noteById.setIsPrivate(isPrivate);
-        noteById.setUpdateTime(LocalDateTime.now());
-        int i = noteMapper.updateNote(noteById);
+        if (StringUtils.isNotBlank(title)) note.setTitle(title);
+        if (StringUtils.isNotBlank(text)) note.setText(text);
+        if (isPrivate != null) note.setIsPrivate(isPrivate);
+        note.setUpdateTime(LocalDateTime.now());
+        int i = noteMapper.updateNote(note);
         if (i > 0){
+            if (updateCategory){
+                cacheService.removeCategoryChildren(note);
+                cacheService.addCategoryChildren(note);
+            }
             return Result.success();
         }
         return Result.error(StatusCodeEnum.UPDATE_NOTE_FAILED);
@@ -106,57 +134,82 @@ public class NoteServiceImpl implements NoteService {
         if (uid == null){
             return Result.error(StatusCodeEnum.TOKEN_INVALID);
         }
+        Note note = cacheService.getNote(id);
+        if (note == null){
+            note = noteMapper.getNoteById(id);
+            if (note == null){
+                return Result.success();
+            }
+        }
+        if (note.getId() == null || note.getUid() != uid){
+            return Result.success();
+        }
         int i = noteMapper.deleteNote(id, uid);
         if (i > 0){
-            commentMapper.deleteByNoteId(uid, id);
+            commentMapper.deleteByNoteId(id); // 删除评论
             rabbitTemplate.convertAndSend("update-note-count-queue", uid+ ":" + -1);
+            cacheService.removeCategoryChildren(note);
             return Result.success();
         }
         return Result.error(StatusCodeEnum.DELETE_NOTE_FAILED);
     }
 
     @Override
-    public Result<PageResult<NoteListVO>> getNoteList(String category, Long uid) {
+    public Result<PageResult<NoteListVO>> getNoteList(Long cid, Long uid, Boolean isPrivate) {
         if (uid == null){
             return Result.error(StatusCodeEnum.TOKEN_INVALID);
         }
-        Note query = new Note();
-        query.setUid(uid);
-        if (StringUtils.isNotBlank(category)){ // 分组查找, 默认查找 cid is null 的笔记(未分组)
-            Category categoryByName = categoryMapper.getCategoryByNames(category, uid);
-            if (categoryByName == null){
-                return Result.error(StatusCodeEnum.CATEGORY_NOT_FOUND);
-            }
-            query.setCid(categoryByName.getId());
+        if (cacheService.isHasKeyCategoryChildren(uid, cid)){
+                List<Note> categoryAllChildren = cacheService.getCategoryAllChildren(uid, cid);
+                categoryAllChildren = categoryAllChildren.stream().filter(note -> isPrivate == null || note.getIsPrivate() == isPrivate).toList();
+                return Result.success(new PageResult<>(categoryAllChildren.size(), BeanUtil.copyToList(categoryAllChildren, NoteListVO.class)));
+        }else {
+                Note dbNote = new Note();
+                dbNote.setUid(uid);
+                dbNote.setCid(cid);
+                List<Note> notes = noteMapper.selectNote(dbNote);
+                if (notes.isEmpty()){
+                    return Result.success(new PageResult<>(0, BeanUtil.copyToList(notes, NoteListVO.class)));
+                }
+                cacheService.saveCategoryAllChildren(uid, cid, notes);
+                notes = notes.stream().filter(note -> isPrivate == null || note.getIsPrivate() == isPrivate).toList();
+                return Result.success(new PageResult<>(notes.size(), BeanUtil.copyToList(notes, NoteListVO.class)));
         }
-        List<Note> notes = noteMapper.selectNote(query);
-        List<NoteListVO> noteListVOS = BeanUtil.copyToList(notes, NoteListVO.class);
-        return Result.success(new PageResult<>(noteListVOS.size(), noteListVOS));
     }
 
     @Override
     public Result<NoteVO> getNoteInfo(Long id, Long uid) {
-        Note noteById = noteMapper.getNoteById(id, uid);
-        if (noteById == null){
+        Note note = cacheService.getNote(id);
+        if (note == null){
+            note = noteMapper.getNoteById(id);
+            if (note == null){
+                cacheService.saveNullNote(id);
+                return Result.error(StatusCodeEnum.NOTE_NOT_FOUND);
+            }
+            cacheService.saveNote(note);
+        }
+        if (note.getId() == null){
             return Result.error(StatusCodeEnum.NOTE_NOT_FOUND);
         }
-        if (uid == null && noteById.getIsPrivate()) // 私密笔记需要验证 token
+        if (note.getIsPrivate()) // 私密笔记需要验证 token
         {
-            return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+            if (uid == null || note.getUid() != uid){
+                return Result.error(StatusCodeEnum.ILLEGAL_REQUEST);
+            }
         }
-        NoteVO noteInfo = BeanUtil.copyProperties(noteById, NoteVO.class);
-        noteInfo.setCategoryName(Optional.ofNullable(noteById.getCid()).map(c -> categoryMapper.getCategoryById(c, uid).getName()).orElse(null));
+        NoteVO noteInfo = BeanUtil.copyProperties(note, NoteVO.class);
         return Result.success(noteInfo);
     }
 
     @Override
-    public Result<List<NoteListVO>> getShareList(Long uid) {
-        Note query = new Note();
-        query.setUid(uid);
-        query.setIsPrivate(Boolean.FALSE); // 查找公开笔记
-        List<Note> notes = noteMapper.selectNote(query);
-        List<NoteListVO> noteListVOS = BeanUtil.copyToList(notes, NoteListVO.class);
-        return Result.success(noteListVOS);
+    public Result<List<NoteInfo>> getPublicNote(Long uid) {
+        if (uid == null){
+            return Result.error(StatusCodeEnum.TOKEN_INVALID);
+        }
+        List<NoteInfo> notes =  noteMapper.getPublicNoteInfo(uid);
+        if (notes.isEmpty()){
+            return Result.success(new ArrayList<>());
+        }
+        return Result.success(notes);
     }
-
 }
