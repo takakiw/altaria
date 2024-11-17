@@ -31,6 +31,8 @@
     <file url="file://$PROJECT_DIR$/service/groups-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/note-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/note-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/preview-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/preview-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/share-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/share-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/space-service/src/main/java" charset="UTF-8" />

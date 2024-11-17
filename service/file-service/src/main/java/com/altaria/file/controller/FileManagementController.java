@@ -29,7 +29,7 @@ public class FileManagementController {
     @Autowired
     private FileManagementService fileManagementService;
 
-    // 通过FeignClient调用, 获取文件信息
+    // 通过FeignClient调用, 批量获取文件信息
     @GetMapping("/info/{fids}")
     public Result<List<FileInfo>> getFileInfos(@PathVariable("fids") List<Long> fids,
                                                @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid){
@@ -40,9 +40,17 @@ public class FileManagementController {
         }
         return fileManagementService.getFileInfoBatch(fids, uid);
     }
-
-
-
+    // 通过FeignClient调用, 判断获取单个文件
+    @GetMapping("/api/info/{id}")
+    public Result<FileInfo> getFileInfo(@PathVariable("id") Long id,
+                                        @RequestParam(value = "uid", required = false) Long uid){
+        String requestPathService = request.getHeader(FeignConstants.REQUEST_ID_HEADER);
+        // 判断是否从FeignClient调用
+        if (requestPathService== null || !requestPathService.equals(FeignConstants.REQUEST_ID_VALUE)){
+            return Result.error();
+        }
+        return fileManagementService.getFileInfo(id, uid);
+    }
 
     // 通过接口调用上传图片，内部使用FeignClient进行调用
     @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -106,16 +114,18 @@ public class FileManagementController {
     /**
      * 下载文件
      * @param response
-     * @param id
+     * @param url
      * @param uid
+     * @param expire
+     * @param sign
      */
-    @GetMapping("/download/{id}")
+    @GetMapping("/download/{url}")
     public void download(HttpServletResponse response,
-                         @PathVariable("id") Long id,
+                         @PathVariable("url") String url,
                          @RequestParam("uid") Long uid,
                          @RequestParam("expire") Long expire,
                          @RequestParam("sign") String sign) {
-        fileManagementService.download(response, id, uid, expire, sign);
+        fileManagementService.download(response, url, uid, expire, sign);
     }
 
     /**

@@ -48,7 +48,7 @@ public class FileServiceClientFallbackFactory implements FallbackFactory<FileSer
             }
 
             @Override
-            public Result<String> sign(Long id, Long uid, String category) {
+            public Result<FileInfo> getFileInfo(Long id, Long uid) {
                 return Result.error();
             }
         };

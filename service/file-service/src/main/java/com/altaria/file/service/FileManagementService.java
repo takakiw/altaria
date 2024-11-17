@@ -21,7 +21,7 @@ public interface FileManagementService {
 
     Result<List<FileInfo>> getPath(Long id, Long uid);
 
-    void download(HttpServletResponse response, Long id, Long uid, Long expire, String sign);
+    void download(HttpServletResponse response, String url, Long uid, Long expire, String sign);
 
     Result deleteFile(List<Long> ids, Long uid);
 
@@ -42,4 +42,6 @@ public interface FileManagementService {
     Result<String> downloadSign(Long id, Long uid);
 
     Result delUpload(Long id, Long uid);
+
+    Result<FileInfo> getFileInfo(Long id, Long uid);
 }
