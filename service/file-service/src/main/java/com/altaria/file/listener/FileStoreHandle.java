@@ -1,13 +1,16 @@
 package com.altaria.file.listener;
 
 import cn.hutool.crypto.digest.DigestUtil;
-import com.alibaba.fastjson.JSONObject;
 import com.altaria.common.constants.FileConstants;
 import com.altaria.common.constants.MinioConstants;
 import com.altaria.common.enums.FileType;
+import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
-import com.altaria.common.pojos.file.mq.UploadMQType;
+import com.altaria.file.service.FileManagementService;
+import com.altaria.rabbitmq.config.entity.mq.RecycleMqType;
+import com.altaria.rabbitmq.config.entity.mq.UploadMQType;
 import com.altaria.common.utils.FfmpegUtil;
+import com.altaria.config.exception.BaseException;
 import com.altaria.file.cache.FileCacheService;
 import com.altaria.file.mapper.FileInfoMapper;
 import com.altaria.minio.service.MinioService;
@@ -16,25 +19,33 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Component
 public class FileStoreHandle {
 
     @Autowired
+    private DataSourceTransactionManager dataSourceTransactionManager;
+
+
+    @Autowired
     private MinioService minioService;
 
     @Autowired
     private FileInfoMapper fileInfoMapper;
+
+    @Autowired
+    private FileManagementService fileManagementService;
 
     @Autowired
     private FileCacheService cacheService;
@@ -51,15 +62,8 @@ public class FileStoreHandle {
     }
 
     @RabbitListener(queues = "recycle-delete-queue")
-    public void deleteRecycleFile(String message) {
-        String[] split = message.split("-");
-        Long uid = Long.parseLong(split[0]);
-        if (split.length == 1){
-            return;
-        }
-        List<Long> longs = Arrays.stream(split[1].split(",")).map(Long::parseLong).toList();
-        fileInfoMapper.deleteBatch(longs, uid);
-        cacheService.deleteRecycleFiles(uid, longs);
+    public void deleteRecycleFile(RecycleMqType recycle) {
+        Result<Object> objectResult = fileManagementService.removeRecycleFile(recycle.getFids());
     }
 
 
@@ -72,14 +76,24 @@ public class FileStoreHandle {
         String suffix = message.getSuffix();
         String tempPath = message.getTempPath();
         String md5 = message.getMd5();
+
+        DefaultTransactionDefinition td = new DefaultTransactionDefinition();
+        TransactionStatus status = dataSourceTransactionManager.getTransaction(td);
+
         // 转码
-        transferFile(uid, dbId, fid, contentType, suffix, tempPath, md5);
+        try {
+            transferFile(uid, dbId, fid, contentType, suffix, tempPath, md5);
+            dataSourceTransactionManager.commit(status);
+        } catch (Exception e) {
+            dataSourceTransactionManager.rollback(status);
+            log.error("转码失败, 文件id: {},用户id: {}, 错误信息: {}", dbId, uid, e.getMessage());
+        }
     }
 
     private void transferFile(Long uid, long dbId, Long fid, String contentType, String suffix, String tempPath, String md5) {
         // 判断MD5是否重复
         List<FileInfo> fileByMd5 = fileInfoMapper.getFileByMd5(md5);
-        if (fileByMd5!= null && fileByMd5.size() > 0){
+        if (fileByMd5!= null && fileByMd5.size() > 1){
             log.info("文件MD5重复, 文件id: {},用户id: {}", dbId, uid);
             // 删除临时文件， 直接使用已有文件
             File sourceFile = new File(tempPath + fid);
@@ -88,7 +102,7 @@ public class FileStoreHandle {
                     FileUtils.deleteDirectory(sourceFile);
                     log.info("删除临时文件成功 {}", sourceFile.getAbsolutePath());
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new BaseException(e.getMessage());
                 }
             }
             // 使用已有文件更新数据库
@@ -150,7 +164,7 @@ public class FileStoreHandle {
                     int i = fileInfoMapper.updateURLAndCoverByMd5(minioId + suffix, minioId + "_.jpg", md5, FileConstants.TRANSFORMED_END);
                     if (i <= 0){
                         log.error("数据库更新失败, 文件id: {},用户id: {}", dbId, uid);
-                        throw new RuntimeException("数据库更新失败");
+                        throw new BaseException("数据库更新失败");
                     }
 
                 } else if (type.compareTo(FileType.IMAGE.getType()) == 0) { // 压缩图片
@@ -164,7 +178,7 @@ public class FileStoreHandle {
                     int i = fileInfoMapper.updateURLAndCoverByMd5(minioId + suffix, minioId + "_.jpg", md5, FileConstants.TRANSFORMED_END);
                     if (i <= 0){
                         log.error("数据库更新失败, 文件id: {},用户id: {}", dbId, uid);
-                        throw new RuntimeException("数据库更新失败");
+                        throw new BaseException("数据库更新失败");
                     }
                 }else { // 其他文件
                     // 上传minio
@@ -174,7 +188,7 @@ public class FileStoreHandle {
                     int i = fileInfoMapper.updateURLAndCoverByMd5(minioId + suffix, null, md5, FileConstants.TRANSFORMED_END);
                     if (i <= 0){
                         log.error("数据库更新失败, 文件id: {},用户id: {}", dbId, uid);
-                        throw new RuntimeException("数据库更新失败");
+                        throw new BaseException("数据库更新失败");
                     }
                 }
                 // 更新缓存中文件信息，包括url和封面，以及转码状态
@@ -185,9 +199,12 @@ public class FileStoreHandle {
                 minioService.deleteFile(minioId + "_.jpg");
                 fileInfoMapper.updateURLAndCoverByMd5(null, null, md5, FileConstants.TRANSFORMED_ERROR);
                 cacheService.updateFileTransformed(uid, dbId, FileConstants.TRANSFORMED_ERROR);
+                log.error("转码失败, 文件id: {},用户id: {}, 错误信息: {}", dbId, uid, e.getMessage());
+                throw new BaseException("转码失败");
             }
         }catch (Exception e){
             log.error("转码失败, 文件id: {},用户id: {}, 错误信息: {}", dbId, uid, e.getMessage());
+            throw new BaseException("转码失败");
         }finally {
             if (null != writeFile) {
                 try {

@@ -1,4 +1,4 @@
-package com.altaria.common.pojos.file.mq;
+package com.altaria.rabbitmq.config.entity.mq;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
