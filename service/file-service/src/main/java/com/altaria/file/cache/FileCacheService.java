@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
 public class FileCacheService {
 
 
-    private static final Long FILE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2 days
-    private static final long FILE_NULL_EXPIRATION_TIME = 60 * 5L; // 5分钟
+    private static final Long FILE_EXPIRATION_TIME = 60 * 60L; // 1小时
+    private static final long FILE_NULL_EXPIRATION_TIME = 60 * 2L; // 5分钟
     private static final String FILE_PREFIX = "file:"; // hset file:uid:fid values
     private static final String FILE_PARENT_UPDATE_PREFIX = "parent:update"; // zset
     private static final String FILE_PARENT_NAME_PREFIX = "parent:name"; // zset
@@ -31,11 +31,11 @@ public class FileCacheService {
 
 
 
-    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2天
+    private static final long FILE_UPLOAD_EXPIRATION_TIME = 60 * 60; // 1小时
     private static final String FILE_UPLOAD_PREFIX = "upload:"; // hset upload:uid:fid values
     private static final String FILE_RECYCLE_PREFIX = "recycle:";
     private static final String FILE_RECYCLE_PARENT_PREFIX = "recycle:parent";
-    private static final long FILE_RECYCLE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2天
+    private static final long FILE_RECYCLE_EXPIRATION_TIME = 60 * 60; // 1小时
 
 
     @Autowired

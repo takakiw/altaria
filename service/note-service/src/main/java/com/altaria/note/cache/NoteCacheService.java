@@ -19,21 +19,20 @@ import java.util.concurrent.TimeUnit;
 public class NoteCacheService {
 
     private static final String CATEGORY_CHILDREN_PREFIX = "category-children:";
-    private static final long CATEGORY_CHILDREN_EXPIRE_TIME = 60 * 60 * 24 * 2; // 2 days
+    private static final long CATEGORY_CHILDREN_EXPIRE_TIME = 60 * 60; // 1 hour
 
     private static final String NOTE_PREFIX = "note:";
-    private static final long NOTE_EXPIRE_TIME = 60 * 60 * 24 * 2; // 2 days
+    private static final long NOTE_EXPIRE_TIME = 60 * 60; // 1 hour
     private static final String CATEGORY_PREFIX = "category:";
-    private static final long CATEGORY_EXPIRE_TIME = 60 * 60 * 24 * 2 - 5 * 60; // 2 days - 5 minutes 保证父级分类缓存时间小于子级分类缓存时间，避免子级分类缓存过期时， 父级分类缓存存在，导致无法获取子级分类缓存
+    private static final long CATEGORY_EXPIRE_TIME = 60 * 60 - 5 * 60;
     private static final String CATEGORY_PARENT_PREFIX = "category-parent:";
-    private static final long CATEGORY_PARENT_EXPIRE_TIME = 60 * 60 * 24 * 2 - 5 * 60;
+    private static final long CATEGORY_PARENT_EXPIRE_TIME = 60 * 60 - 5 * 60;
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     @Async
     public void saveNote(Note note) {
         redisTemplate.opsForValue().set(NOTE_PREFIX + note.getId(), note, NOTE_EXPIRE_TIME, TimeUnit.SECONDS);
-        redisTemplate.expire(NOTE_PREFIX + note.getUid() + ":" + note.getId(), NOTE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
 
     @Async
