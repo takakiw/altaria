@@ -91,10 +91,11 @@ public class CommentServiceImpl implements CommentService {
         if (id == null) {
             return Result.error(StatusCodeEnum.PARAM_ERROR);
         }
+        Comment comment = commentMapper.getCommentById(id);
         // 删除该评论及其所有回复
         int j = commentMapper.deleteCommentAndChild(id);
-        noteMapper.incrCommentCount(id, -j);
-        cacheService.incrNoteCommentCount(id, -j);
+        noteMapper.incrCommentCount(comment.getNid(), -j);
+        cacheService.incrNoteCommentCount(comment.getNid(), -j);
         return Result.success(j);
     }
 }

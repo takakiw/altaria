@@ -111,18 +111,22 @@ public class NoteServiceImpl implements NoteService {
                 }
                 cacheService.saveCategory(category);
             }
-            note.setCid(category.getId());
         }
         if (StringUtils.isNotBlank(title)) note.setTitle(title);
         if (StringUtils.isNotBlank(text)) note.setText(text);
         if (isPrivate != null) note.setIsPrivate(isPrivate);
+        Long oldCid = note.getCid();
+        if (updateCategory) note.setCid(cid);
         note.setUpdateTime(LocalDateTime.now());
         int i = noteMapper.updateNote(note);
         if (i > 0){
             if (updateCategory){
+                note.setCid(oldCid);
                 cacheService.removeCategoryChildren(note);
+                note.setCid(cid);
                 cacheService.addCategoryChildren(note);
             }
+            cacheService.saveNote(note);
             return Result.success();
         }
         return Result.error(StatusCodeEnum.UPDATE_NOTE_FAILED);
