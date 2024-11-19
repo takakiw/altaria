@@ -1,5 +1,6 @@
 package com.altaria.redis;
 
+import com.altaria.redis.config.RedisProperties;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +12,9 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -25,17 +28,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Data
+@EnableConfigurationProperties(RedisProperties.class)
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
-
-    @Value("${spring.data.redis.database:0}")
-    private int redisDatabase;
+    @Autowired
+    private RedisProperties redisProperties;
 
 
     @Bean
@@ -45,9 +43,9 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<String, Object>();
 
         LettuceConnectionFactory factory = new LettuceConnectionFactory();
-        factory.setDatabase(redisDatabase);
-        factory.setHostName(redisHost);
-        factory.setPort(redisPort);
+        factory.setDatabase(redisProperties.getDatabase());
+        factory.setHostName(redisProperties.getHost());
+        factory.setPort(redisProperties.getPort());
         factory.setValidateConnection(true);  // 启用连接验证
         factory.afterPropertiesSet();
         template.setConnectionFactory(factory);
