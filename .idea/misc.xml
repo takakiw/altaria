@@ -14,6 +14,7 @@
         <option value="$PROJECT_DIR$/component/exception/pom.xml" />
         <option value="$PROJECT_DIR$/model/pom.xml" />
         <option value="$PROJECT_DIR$/service/chat-service/pom.xml" />
+        <option value="$PROJECT_DIR$/service/mq-test/pom.xml" />
         <option value="$PROJECT_DIR$/service/ttat/pom.xml" />
         <option value="$PROJECT_DIR$/share-service/pom.xml" />
       </set>

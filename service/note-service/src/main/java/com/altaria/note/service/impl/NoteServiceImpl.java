@@ -216,4 +216,15 @@ public class NoteServiceImpl implements NoteService {
         }
         return Result.success(notes);
     }
+
+    @Override
+    public Result<List<NoteInfo>> getAllPublicNote(Integer page, Integer size) {
+        page = page > 1 ? page : 1;
+        int start = (page - 1) * size;
+        List<NoteInfo> notes =  noteMapper.getAllPublicNoteInfo(start, size);
+        if (notes.isEmpty()){
+            return Result.success(new ArrayList<>());
+        }
+        return Result.success(notes);
+    }
 }

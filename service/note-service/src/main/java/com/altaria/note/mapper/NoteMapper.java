@@ -28,4 +28,7 @@ public interface NoteMapper {
 
     @Update("UPDATE note SET comment_count = comment_count + #{i} WHERE id = #{nid}")
     void incrCommentCount(@Param("nid") Long nid, @Param("i") int i);
+
+    @Select("SELECT * FROM note WHERE is_private = 0 ORDER BY update_time DESC LIMIT #{start}, #{size}")
+    List<NoteInfo> getAllPublicNoteInfo(@Param("start") int start, @Param(("size")) int size);
 }

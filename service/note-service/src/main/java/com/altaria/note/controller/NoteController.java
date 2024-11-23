@@ -63,4 +63,11 @@ public class NoteController {
     private Result<List<NoteInfo>> getPublicNote(@RequestHeader(UserConstants.USER_ID) Long uid) {
         return noteService.getPublicNote(uid);
     }
+
+    // 获取所有的公开笔记
+    @GetMapping("/public/all")
+    private Result<List<NoteInfo>> getAllPublicNote(@RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
+                                                     @RequestParam(value = "size", required = false, defaultValue = "5") Integer size) {
+        return noteService.getAllPublicNote(page, size);
+    }
 }

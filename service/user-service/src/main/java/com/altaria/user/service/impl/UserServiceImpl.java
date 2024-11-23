@@ -72,7 +72,8 @@ public class UserServiceImpl implements UserService {
         if (uId != null && uId.compareTo(queryId) == 0){
             return Result.success(userVO);
         }else {
-            // 加密username 例如abcde => a****
+            userVO.setUserName(null);
+            userVO.setNickName(userVO.getNickName().substring(0,1) + "***");
             userVO.setEmail(null);
             userVO.setRole(null);
             return Result.success(userVO);
