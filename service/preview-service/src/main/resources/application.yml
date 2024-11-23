@@ -5,7 +5,7 @@ spring:
   application:
     name: preview-service
   config:
-    import: nacos:preview-service-space
+    import: nacos:preview-service-space, optional:nacos:zipkin-config
   cloud:
     nacos:
       discovery:

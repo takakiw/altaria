@@ -4,7 +4,7 @@ spring:
   application:
     name: share-service
   config:
-    import: nacos:share-service-space
+    import: nacos:share-service-space, optional:nacos:zipkin-config
   cloud:
     nacos:
       discovery:
