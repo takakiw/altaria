@@ -17,7 +17,7 @@
             <if test="isPrivate!= null">
                 is_private = #{isPrivate},
             </if>
-            <if test="cid!= null">
+            <if test="cid != ''">
                 cid = #{cid},
             </if>
             <if test="updateTime != null">

@@ -29,6 +29,8 @@
     <file url="file://$PROJECT_DIR$/service/file-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/groups-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/groups-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/mq-test/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/mq-test/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/note-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/note-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/preview-service/src/main/java" charset="UTF-8" />
@@ -41,6 +43,8 @@
     <file url="file://$PROJECT_DIR$/service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/storage-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/storage-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/ttat/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/service/ttat/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/user-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/service/user-service/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />

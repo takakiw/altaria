@@ -14,7 +14,7 @@ public class SpaceCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final long SPACE_EXPIRATION_TIME = 60 * 60 * 24 * 2L; // 2 days
+    private static final long SPACE_EXPIRATION_TIME = 60 * 60; // 2 days
     private static final String SPACE_PREFIX = "space:";
 
 

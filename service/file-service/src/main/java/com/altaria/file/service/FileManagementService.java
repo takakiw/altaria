@@ -44,4 +44,6 @@ public interface FileManagementService {
     Result delUpload(Long id, Long uid);
 
     Result<FileInfo> getFileInfo(Long id, Long uid);
+
+    Result<Object> removeRecycleFile(List<Long> fids);
 }

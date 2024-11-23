@@ -23,4 +23,7 @@ public interface CommentMapper {
     // 删除评论及其子评论
     @Delete("delete from comments where to_id = #{id} or pid = #{id} or id = #{id}")
     int deleteCommentAndChild(Long id);
+
+    @Select("SELECT * FROM comments WHERE id = #{id}")
+    Comment getCommentById(@Param("id") Long id);
 }

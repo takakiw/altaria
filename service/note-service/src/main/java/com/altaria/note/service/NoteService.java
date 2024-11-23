@@ -20,4 +20,6 @@ public interface NoteService {
     Result<NoteVO> getNoteInfo(Long id, Long uid);
 
     Result<List<NoteInfo>> getPublicNote(Long uid);
+
+    Result<List<NoteInfo>> getAllPublicNote(Integer page, Integer size);
 }

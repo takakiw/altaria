@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 public interface SpaceServiceClient {
 
     @GetMapping("/space/info")
-    public Result<SpaceVO> space(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
+    Result<SpaceVO> space(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
     @PutMapping("/space/update")
-    public Result updateSpace(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
+    Result updateSpace(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
                               @RequestBody Space space);
 }

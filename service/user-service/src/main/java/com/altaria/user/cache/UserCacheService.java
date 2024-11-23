@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class UserCacheService {
 
-    private static final Long USER_EXPIRATION_TIME = 60 * 60 * 24 * 7L; // 7 days
+    private static final Long USER_EXPIRATION_TIME = 60 * 60L;
 
     private static final Long CODE_EXPIRATION_TIME = 60 * 2L; // 2 minutes
     private static final String EMAIL_CODE_PREFIX = "code:";

@@ -27,12 +27,14 @@ public interface FileInfoMapper {
 
     List<FileInfo> getChildFiles(@Param("pid") Long pid,@Param("uid") Long uid, @Param("status") Integer status);
 
-    int deleteBatch(@Param("ids") List<Long> ids, @Param("uid") Long uid);
+    int deleteBatch(@Param("ids") List<Long> ids);
 
     @Select("SELECT * FROM file WHERE pid = #{pid} AND uid = #{uid} AND file_name = #{fileName} AND status = 0")
     FileInfo getFileChildName(@Param("pid") Long pid,@Param("uid") Long uid,@Param("fileName") String fileName);
 
     List<FileInfo> getFileByIds(@Param("ids") List<Long> ids, @Param("uid") Long uid, @Param("status") Integer status);
+
+    List<FileInfo> getRecycleFileByIds(@Param("ids") List<Long> ids);
 
     int updateStatusBatch(@Param("uid") Long uid, @Param("ids") List<Long> ids, @Param("status") Integer status, @Param("updateTime") LocalDateTime updateTime);
 
@@ -50,14 +52,13 @@ public interface FileInfoMapper {
     @Select("SELECT * FROM file WHERE uid = #{uid} AND status = 2")
     List<FileInfo> getRecycleFiles(Long uid);
 
-
     int insertBatch(@Param("fileInfos") List<FileInfo> fileInfos);
 
     int updatePidAndFileNameBatch(@Param("uid") Long uid, @Param("files") List<FileInfo> files);
 
-    @Select("SELECT * FROM file WHERE uid = #{uid} AND id = #{id} AND status = 2")
-    FileInfo getRecycleFile(@Param("uid") Long uid, @Param("id") Long id);
+    @Select("SELECT * FROM file WHERE status = 2 AND update_time < #{expiredTime}")
+    List<FileInfo> getAllRecycleFiles(@Param("expiredTime") LocalDateTime expiredTime);
 
-    @Delete("DELETE FROM file WHERE update_time < #{expiredTime} AND status = 2")
-    void deleteExpiredRecycleFiles(@Param("expiredTime") LocalDateTime expiredTime);
+    @Select("SELECT * FROM file WHERE id = #{id} AND uid = #{uid} AND status = 2")
+    FileInfo getRecycleFile(@Param("id") Long id, @Param("uid") Long uid);
 }

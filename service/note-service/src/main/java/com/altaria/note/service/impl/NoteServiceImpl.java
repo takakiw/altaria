@@ -111,18 +111,22 @@ public class NoteServiceImpl implements NoteService {
                 }
                 cacheService.saveCategory(category);
             }
-            note.setCid(category.getId());
         }
         if (StringUtils.isNotBlank(title)) note.setTitle(title);
         if (StringUtils.isNotBlank(text)) note.setText(text);
         if (isPrivate != null) note.setIsPrivate(isPrivate);
+        Long oldCid = note.getCid();
+        if (updateCategory) note.setCid(cid);
         note.setUpdateTime(LocalDateTime.now());
         int i = noteMapper.updateNote(note);
         if (i > 0){
             if (updateCategory){
+                note.setCid(oldCid);
                 cacheService.removeCategoryChildren(note);
+                note.setCid(cid);
                 cacheService.addCategoryChildren(note);
             }
+            cacheService.saveNote(note);
             return Result.success();
         }
         return Result.error(StatusCodeEnum.UPDATE_NOTE_FAILED);
@@ -207,6 +211,17 @@ public class NoteServiceImpl implements NoteService {
             return Result.error(StatusCodeEnum.TOKEN_INVALID);
         }
         List<NoteInfo> notes =  noteMapper.getPublicNoteInfo(uid);
+        if (notes.isEmpty()){
+            return Result.success(new ArrayList<>());
+        }
+        return Result.success(notes);
+    }
+
+    @Override
+    public Result<List<NoteInfo>> getAllPublicNote(Integer page, Integer size) {
+        page = page > 1 ? page : 1;
+        int start = (page - 1) * size;
+        List<NoteInfo> notes =  noteMapper.getAllPublicNoteInfo(start, size);
         if (notes.isEmpty()){
             return Result.success(new ArrayList<>());
         }

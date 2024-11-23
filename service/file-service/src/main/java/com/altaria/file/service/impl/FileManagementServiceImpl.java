@@ -12,7 +12,8 @@ import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.common.pojos.file.entity.MoveFile;
 import com.altaria.common.pojos.space.entity.Space;
-import com.altaria.common.pojos.file.mq.UploadMQType;
+import com.altaria.rabbitmq.config.entity.mq.RecycleMqType;
+import com.altaria.rabbitmq.config.entity.mq.UploadMQType;
 import com.altaria.common.pojos.space.vo.SpaceVO;
 import com.altaria.common.utils.SignUtil;
 import com.altaria.config.exception.BaseException;
@@ -24,7 +25,6 @@ import com.altaria.minio.service.MinioService;
 import com.altaria.redis.CheckConnection;
 import com.github.pagehelper.Page;
 import io.seata.spring.annotation.GlobalTransactional;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -126,7 +126,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
         }
         // 复制文件信息
-        List<String> fileNames = null;
+        List<String> fileNames;
         if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(userId, path))){
             fileNames = cacheService.getChildrenAllName(userId, path);
         }else{
@@ -235,15 +235,73 @@ public class FileManagementServiceImpl implements FileManagementService {
         FileInfo file = cacheService.getFile(uid, id);
         if (file == null){
             file = fileInfoMapper.getFileById(id, uid);
-            if (file == null){
-                cacheService.saveNullFile(uid, id);
-                return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
-            }
-            cacheService.saveFile(file);
+            if (file == null) file = fileInfoMapper.getRecycleFile(id, uid);
+            if (file == null) return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
+        }
+        if (file.getId() == null){
+            return Result.error(StatusCodeEnum.FILE_NOT_EXISTS);
         }
         return Result.success(file);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result<Object> removeRecycleFile(List<Long> fids) {
+        if (fids == null || fids.isEmpty()){
+            return Result.success();
+        }
+        // 查询文件信息
+        List<FileInfo> recycleFileByIds = fileInfoMapper.getRecycleFileByIds(fids);
+        if (recycleFileByIds == null || recycleFileByIds.isEmpty()){
+            return Result.success();
+        }
+
+        for (FileInfo recycleFileInfo : recycleFileByIds){
+            if (recycleFileInfo.getStatus().compareTo(FileConstants.STATUS_RECYCLE) == 0){
+                spaceServiceClient.updateSpace(recycleFileInfo.getUid(), new Space(recycleFileInfo.getUid(), -recycleFileInfo.getSize()));
+            }
+        }
+
+        Map<String, String> md5UrlAndCoverMap = new HashMap<>(); // 存储md5和url的映射
+        Map<String, Integer> md5Count = new HashMap<>(); // 存储md5和数量的映射
+        List<FileInfo> delRealFile = new ArrayList<>(); // 删除真实的File
+        Stack<FileInfo> stk = new Stack<>();
+        stk.addAll(recycleFileByIds);
+        while (!stk.isEmpty()){
+            FileInfo pop = stk.pop();
+            if (pop.getType().compareTo(FileType.DIRECTORY.getType()) == 0){
+                List<FileInfo> children = fileInfoMapper.getChildFiles(pop.getId(), pop.getUid(),FileConstants.STATUS_DELETE);
+                if (children != null && !children.isEmpty()) stk.addAll(children);
+            }
+            if(pop.getMd5() != null){
+                if (md5UrlAndCoverMap.containsKey(pop.getMd5())) {
+                    md5Count.put(pop.getMd5(), md5Count.get(pop.getMd5()) + 1);
+                }else {
+                    md5UrlAndCoverMap.put(pop.getMd5(), pop.getUrl() + ":" + pop.getCover());
+                    md5Count.put(pop.getMd5(), 1);
+                }
+            }
+            delRealFile.add(pop);
+        }
+        // 删除minio中的文件
+        List<String> urls = new ArrayList<>();
+        for (String md5 : md5UrlAndCoverMap.keySet()){
+            List<FileInfo> fileByMd5 = fileInfoMapper.getFileByMd5(md5);
+            if (fileByMd5.size() == md5Count.get(md5)){
+                String s = md5UrlAndCoverMap.get(md5);
+                String[] split = s.split(":");
+                urls.add(split[0]);
+                if (!split[1].equals("null")) urls.add(split[1]);
+            }
+        }
+        // 删除数据库中的文件信息
+        int i = fileInfoMapper.deleteBatch(delRealFile.stream().map(FileInfo::getId).toList());
+        if (!urls.isEmpty()){
+            minioService.deleteFile(urls);
+        }
+        delRealFile.forEach(f -> cacheService.deleteRecycleFile(f.getUid(), f.getId()));
+        return Result.success();
+    }
 
 
     @Override
@@ -640,17 +698,14 @@ public class FileManagementServiceImpl implements FileManagementService {
         // 过虑过期文件
         List<Long> ids = recycleFiles.stream().filter(f ->
                 f.getUpdateTime().toEpochSecond(ZoneOffset.of("+8")) + FileConstants.RECYCLE_EXPIRE_TIME <= LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8"))).map(FileInfo::getId).toList();
-        rabbitTemplate.convertAndSend( "recycle-delete-queue", uid + "-" + StringUtils.join(ids, ","));
-        System.out.println(ids);
-
+        if (!ids.isEmpty()){
+            RecycleMqType recycleMqType = new RecycleMqType(uid, ids);
+            rabbitTemplate.convertAndSend( "recycle-delete-queue", recycleMqType);
+        }
         recycleFiles = recycleFiles.stream().filter(f ->
                 f.getUpdateTime().toEpochSecond(ZoneOffset.of("+8")) + FileConstants.RECYCLE_EXPIRE_TIME > LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8"))).toList();
         return Result.success(new PageResult<>(recycleFiles.size(), recycleFiles));
     }
-
-
-    @Autowired
-    private HttpServletRequest request;
 
     @Override
     public void download(HttpServletResponse response, String url, Long uid, Long expire, String sign) {
@@ -804,7 +859,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             cacheService.deleteRecycleFiles(uid, delFileList.stream().map(FileInfo::getId).toList());
             return Result.success();
         }
-        fileInfoMapper.deleteBatch(set.stream().toList(), uid);
+        fileInfoMapper.deleteBatch(set.stream().toList());
         List<String> delUrls = new ArrayList<>();
         for (String md5 : md5UrlMap.keySet()){
             if (Objects.equals(md5Count.get(md5), md5Total.get(md5))){
@@ -862,7 +917,6 @@ public class FileManagementServiceImpl implements FileManagementService {
             List<FileInfo> fileByMd5s = fileInfoMapper.getFileByMd5(md5);
             if (fileByMd5s != null && !fileByMd5s.isEmpty()) {
                 FileInfo fileByMd5 = fileByMd5s.get(0);
-                log.error(usedSpace.toString());
                 if (fileByMd5.getSize() + usedSpace.getUseSpace() > usedSpace.getTotalSpace()) {
                     log.error("秒传失败，空间不足");
                     return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);

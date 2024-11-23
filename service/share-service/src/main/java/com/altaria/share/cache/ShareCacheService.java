@@ -20,11 +20,11 @@ public class ShareCacheService {
 
     private static final String SHARE_PREFIX = "share:";
     private static final String USER_SHARE_PREFIX = "user-share:";
-    private static final long SHARE_EXPIRE_TIME = 60 * 60 * 24 * 2; // 2 days
-    private static final long NULL_SHARE_EXPIRE_TIME = 60 * 5;
+    private static final long SHARE_EXPIRE_TIME = 60 * 60 ;
+    private static final long NULL_SHARE_EXPIRE_TIME = 60 * 2;
 
-    private static final long USER_SHARE_EXPIRE_TIME = 60 * 60 * 24 * 2; // 7 days
-    private static final long NULL_USER_SHARE_EXPIRE_TIME = 2 * 60 * 60; // 2 hours
+    private static final long USER_SHARE_EXPIRE_TIME = 60 * 60;
+    private static final long NULL_USER_SHARE_EXPIRE_TIME =60 * 2;
 
     private static final long NULL_USER_SHARE_VALUE = 1000000000000000000L;
     @Autowired

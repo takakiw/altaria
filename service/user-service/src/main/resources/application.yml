@@ -3,8 +3,11 @@ server:
 spring:
   application:
     name: user-service
-  config:
-      import: nacos:user-service-space, nacos:rabbit-config
+  data:
+    redis:
+      host: ${}
+      port: 6379
+      database: 0
   cloud:
     nacos:
       discovery:
@@ -13,12 +16,17 @@ spring:
         password: nacos
       config:
         server-addr: 192.168.96.132:8848
-        file-extension: yaml
         username: nacos
         password: nacos
-      server-addr: 192.168.96.132:8848
+        encode: UTF-8
+        file-extension: yml
+        refresh-enabled: true
     openfeign:
-      circuitbreaker: # 熔断器配置
+      circuitbreaker:
         enabled: true
       httpclient:
         enabled: true
+  config:
+    import:
+      - optional:nacos:user-service-space
+      - optional:nacos:rabbit-config

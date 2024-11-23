@@ -23,6 +23,8 @@
     <!-- 定义根日志记录器的级别和附加的 appender -->
     <root level="info">
         <appender-ref ref="CONSOLE" /> <!-- 参考控制台 appender -->
+    </root>
+    <root level="warn">
         <appender-ref ref="FILE" /> <!-- 参考文件 appender -->
     </root>
 

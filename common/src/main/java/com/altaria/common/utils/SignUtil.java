@@ -3,7 +3,6 @@ package com.altaria.common.utils;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
 public class SignUtil {
