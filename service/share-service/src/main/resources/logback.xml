@@ -6,6 +6,11 @@
 
     <!-- 控制台日志输出配置 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level> <!-- 仅输出 INFO 级别日志 -->
+            <onMatch>ACCEPT</onMatch> <!-- 匹配时接受 -->
+            <onMismatch>DENY</onMismatch> <!-- 不匹配时拒绝 -->
+        </filter>
         <encoder>
             <pattern>${LOG_PATTERN}</pattern> <!-- 使用上面定义的日志格式 -->
         </encoder>
@@ -14,13 +19,15 @@
     <!-- 文件日志输出配置 -->
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
         <file>.logs/share-service.log</file> <!-- 日志文件的位置 -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level> <!-- 仅输出 WARN 及以上级别日志 -->
+        </filter>
         <encoder>
-            <pattern>%date{MM-dd HH:mm:ss} %-5level [%thread] %logger{35} %msg%n</pattern> <!-- 使用上面定义的日志格式 -->
+            <pattern>${LOG_PATTERN}</pattern> <!-- 使用上面定义的日志格式 -->
         </encoder>
     </appender>
 
-
-    <!-- 定义根日志记录器的级别和附加的 appender -->
+    <!-- 定义根日志记录器的级别 -->
     <root level="info">
         <appender-ref ref="CONSOLE" /> <!-- 参考控制台 appender -->
         <appender-ref ref="FILE" /> <!-- 参考文件 appender -->

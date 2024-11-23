@@ -2,7 +2,7 @@ package com.altaria.user.aspect;
 
 import com.altaria.common.annotation.AutoFill;
 import com.altaria.common.enums.OperationType;
-import com.altaria.config.exception.BaseException;
+//import com.altaria.config.exception.BaseException;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -50,7 +50,7 @@ public class AutoFillAspect {
                 Method setUpdateTime = entity.getClass().getDeclaredMethod("setUpdateTime", LocalDateTime.class);
                 setUpdateTime.invoke(entity, now);
             } catch (Exception  e) {
-                throw new BaseException(e.getMessage());
+                //throw new BaseException(e.getMessage());
             }
         }
 
