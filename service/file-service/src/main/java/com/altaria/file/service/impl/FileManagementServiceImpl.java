@@ -126,7 +126,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             return Result.error(StatusCodeEnum.SPACE_NOT_ENOUGH);
         }
         // 复制文件信息
-        List<String> fileNames = null;
+        List<String> fileNames;
         if (Boolean.TRUE.equals(cacheService.ParentKeyCodeExists(userId, path))){
             fileNames = cacheService.getChildrenAllName(userId, path);
         }else{

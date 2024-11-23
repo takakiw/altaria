@@ -1,9 +1,5 @@
 package com.altaria.common.constants;
 
-import ch.qos.logback.core.testUtil.RandomUtil;
-import org.springframework.util.StringUtils;
-
-import java.util.Random;
 
 public class UserConstants {
     public static final String USER_ID = "userId";
@@ -25,10 +21,8 @@ public class UserConstants {
 
     public static final int DEFAULT_ROLE = 0;
     public static final String DEFAULT_NICKNAME_PREFIX = "cloud_";
-    public static final String USERNAME_REGEX = "^[a-zA-Z0-9_-]{4,20}$";
     public static final String TYPE_UPDATE_PWD = "updatePwd";
     public static final String EMAIL_UPDATE_PWD_TEXT = "您正在修改Altaria云平台密码，您的验证码是：<h1 style='color:blue;'>%s</h1>，请在2分钟内输入。如非本人操作，请忽略本邮件。";
     public static final String EMAIL_UPDATE_PWD_SUBJECT = "修改密码验证码";
-    public static final String STORAGE_TYPE = "avatar";
     public static final long MAX_AVATAR_SIZE = 1024 * 1024 * 2; // 2MB
 }

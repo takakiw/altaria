@@ -18,18 +18,18 @@ import java.util.List;
 public interface FileServiceClient {
 
     @RequestMapping(value = "/upload-image",consumes = MediaType.MULTIPART_FORM_DATA_VALUE,method = {RequestMethod.POST},produces = {MediaType.APPLICATION_JSON_UTF8_VALUE},headers = "content-type=multipart/form-data")
-    public String uploadImage(@RequestPart("file") MultipartFile file);
+    String uploadImage(@RequestPart("file") MultipartFile file);
 
     @GetMapping("/info/{fids}")
-    public Result<List<FileInfo>> getFileInfos(@PathVariable("fids") List<Long> fids,
+    Result<List<FileInfo>> getFileInfos(@PathVariable("fids") List<Long> fids,
                                                @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
     @GetMapping("/path")
-    public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = false) Long path,
+    Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = false) Long path,
                                           @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
     @GetMapping("/list")
-    public Result<PageResult<FileInfo>> getChildrenList(
+    Result<PageResult<FileInfo>> getChildrenList(
             @RequestParam(value = "id", required = false) Long id,
             @RequestParam(value = "type", required = false) Integer type,
             @RequestParam(value = "fileName" , required = false) String fileName,
@@ -37,14 +37,14 @@ public interface FileServiceClient {
             @RequestParam(value = "order", required = false, defaultValue = "0") Integer order);
 
     @PostMapping("/file/saveShare")
-    public Result saveFileToCloud(@RequestBody SaveShare saveShare);
+    Result saveFileToCloud(@RequestBody SaveShare saveShare);
 
     @GetMapping("/download/sign/{id}")
-    public Result<String> downloadSign(@PathVariable("id") Long id,
+    Result<String> downloadSign(@PathVariable("id") Long id,
                                        @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid);
 
 
     @GetMapping("/api/info/{id}")
-    public Result<FileInfo> getFileInfo(@PathVariable("id") Long id,
+    Result<FileInfo> getFileInfo(@PathVariable("id") Long id,
                                         @RequestParam(value = "uid", required = false) Long uid);
 }

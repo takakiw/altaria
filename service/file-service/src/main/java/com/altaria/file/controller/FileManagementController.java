@@ -75,17 +75,6 @@ public class FileManagementController {
     }
 
 
-    /**
-     * 上传文件
-     * @param uid
-     * @param fid
-     * @param pid
-     * @param file
-     * @param md5
-     * @param index
-     * @param total
-     * @return
-     */
     @PostMapping("/upload")
     public Result upload(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid,
                          @NotNull Long fid,
@@ -99,26 +88,14 @@ public class FileManagementController {
         return fileManagementService.upload(uid,fid, pid, file, fileName, type, md5, index, total);
     }
 
-    /**
-     * 获取下载签名
-     * @param id
-     * @param uid
-     * @return
-     */
+
     @GetMapping("/download/sign/{id}")
     public Result<String> downloadSign(@PathVariable("id") Long id,
                                        @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.downloadSign(id, uid);
     }
 
-    /**
-     * 下载文件
-     * @param response
-     * @param url
-     * @param uid
-     * @param expire
-     * @param sign
-     */
+
     @GetMapping("/download/{url}")
     public void download(HttpServletResponse response,
                          @PathVariable("url") String url,
@@ -128,49 +105,28 @@ public class FileManagementController {
         fileManagementService.download(response, url, uid, expire, sign);
     }
 
-    /**
-     * 创建文件夹
-     * @param fileInfo
-     * @return
-     */
+
     @PostMapping("/mkdir")
     public Result mkdir(@RequestBody FileInfo fileInfo,
                         @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.mkdir(uid, fileInfo.getPid(), fileInfo.getFileName());
     }
 
-    /**
-     * 移动文件
-     * @param moveFile
-     * @return
-     */
+
     @PutMapping("/mvfile")
     public Result moveFile(@RequestBody MoveFile moveFile,
                            @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.moveFile(moveFile, uid);
     }
 
-    /**
-     * 重命名文件
-     * @param fileInfo
-     * @param uid
-     * @return
-     */
+
     @PutMapping("/rename")
     public Result rename(@RequestBody FileInfo fileInfo,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.renameFile(fileInfo, uid);
     }
 
-    /**
-     * 获取文件列表
-     * @param id
-     * @param type
-     * @param fileName
-     * @param order
-     * @param uid
-     * @return PageResult<FileInfo>
-     */
+
     @GetMapping("/list")
     public Result<PageResult<FileInfo>> getChildrenList(
                                             @RequestParam(value = "id", required = false) Long id,
@@ -182,12 +138,7 @@ public class FileManagementController {
     }
 
 
-    /**
-     * 获取文件路径
-     * @param path
-     * @param uid
-     * @return Result
-     */
+
     @GetMapping("/path")
     public Result<List<FileInfo>> getPath(@RequestParam(value = "path", required = false) Long path,
                           @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
@@ -195,12 +146,7 @@ public class FileManagementController {
     }
 
 
-    /**
-     * 删除文件
-     * @param ids
-     * @param uid
-     * @return
-     */
+
     @DeleteMapping("/del/{ids}")
     public Result delete(@PathVariable("ids") List<Long> ids,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
@@ -208,46 +154,27 @@ public class FileManagementController {
     }
 
 
-    /**
-     *  彻底删除文件
-     * @param ids
-     * @param uid
-     * @return
-     */
+
     @DeleteMapping("/remove/{ids}")
     public Result remove(@PathVariable("ids") List<Long> ids,
                          @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.removeFile(ids, uid);
     }
 
-    /**
-     * 恢复文件
-     * @param ids
-     * @param uid
-     * @return
-     */
+
     @PutMapping("/restore/{ids}")
     public Result restore(@PathVariable("ids") List<Long> ids,
                           @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {
         return fileManagementService.restoreFile(ids, uid);
     }
 
-    /**
-     * 获取回收站文件列表
-     * @param uid
-     * @return
-     */
+
     @GetMapping("/recycle/list")
     public Result<PageResult<FileInfo>> recycleList(@RequestHeader(value = UserConstants.USER_ID, required = false) Long uid){
         return fileManagementService.getRecycleFileList(uid);
     }
 
-    /**
-     * 删除取消上传的本地临时文件
-     * @param id
-     * @param uid
-     * @return
-     */
+
     @DeleteMapping("/delUpload/{id}")
     public Result delUpload(@PathVariable("id") Long id,
                             @RequestHeader(value = UserConstants.USER_ID, required = false) Long uid) {

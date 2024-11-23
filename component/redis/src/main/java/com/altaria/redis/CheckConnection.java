@@ -41,8 +41,4 @@ public class CheckConnection {
     public boolean isRedisConnected() {
         return isRedisConnected;
     }
-
-    public void setRedisConnected(boolean redisConnected) {
-        isRedisConnected = redisConnected;
-    }
 }

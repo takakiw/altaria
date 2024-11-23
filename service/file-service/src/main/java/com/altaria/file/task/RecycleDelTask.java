@@ -30,7 +30,7 @@ public class RecycleDelTask {
         System.out.println(expiredTime);
         List<FileInfo> fileInfos = fileInfoMapper.getAllRecycleFiles(expiredTime);
         if (fileInfos!= null && fileInfos.size() > 0){
-            Result<Object> objectResult = fileManagementService.removeRecycleFile(fileInfos.stream().map(FileInfo::getId).toList());
+            fileManagementService.removeRecycleFile(fileInfos.stream().map(FileInfo::getId).toList());
         }
     }
 

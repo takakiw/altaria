@@ -4,7 +4,6 @@ import cn.hutool.crypto.digest.DigestUtil;
 import com.altaria.common.constants.FileConstants;
 import com.altaria.common.constants.MinioConstants;
 import com.altaria.common.enums.FileType;
-import com.altaria.common.pojos.common.Result;
 import com.altaria.common.pojos.file.entity.FileInfo;
 import com.altaria.file.service.FileManagementService;
 import com.altaria.rabbitmq.config.entity.mq.RecycleMqType;
@@ -63,7 +62,7 @@ public class FileStoreHandle {
 
     @RabbitListener(queues = "recycle-delete-queue")
     public void deleteRecycleFile(RecycleMqType recycle) {
-        Result<Object> objectResult = fileManagementService.removeRecycleFile(recycle.getFids());
+        fileManagementService.removeRecycleFile(recycle.getFids());
     }
 
 
@@ -221,10 +220,10 @@ public class FileStoreHandle {
                 }
             }
             if (data.exists()){
-                boolean delete = data.delete();
+                 data.delete();
             }
             if (cover.exists()){
-                boolean delete = cover.delete();
+                cover.delete();
             }
         }
     }

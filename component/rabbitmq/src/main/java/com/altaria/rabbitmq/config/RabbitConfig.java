@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 
+
 @Configuration
 public class RabbitConfig {
 
@@ -27,12 +28,7 @@ public class RabbitConfig {
 
     @Bean
     public Queue deleteFileQueue() {
-        return new Queue("delete-file-queue");
-    }
-
-    @Bean
-    public Queue resultQueue() {
-        return new Queue("update-queue");
+        return new Queue("delete-queue");
     }
 
     @Bean

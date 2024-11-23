@@ -12,11 +12,9 @@ import org.apache.commons.compress.utils.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
-import org.springframework.scheduling.annotation.Async;
 
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -49,10 +47,8 @@ public class MinioServiceImpl implements MinioService {
             );
             log.info("成功上传文件 {} 到 {}", fileName, minioProperties.getBucketName());
             inputStream.close();
-            return;
         } catch (Exception e) {
-            log.error("minio文件上传失败{}", fileName);
-            return;
+            throw new RuntimeException("minio文件上传失败: "+fileName, e);
         }finally {
             if (inputStream != null){
                 try {
@@ -77,10 +73,8 @@ public class MinioServiceImpl implements MinioService {
             );
             log.info("成功上传文件 {} 到 {}", fileName, bucketName);
             inputStream.close();
-            return;
         } catch (Exception e) {
-            log.error("minio文件上传失败{}", fileName, e);
-            return;
+            throw new RuntimeException("minio文件上传失败: "+fileName, e);
         }finally {
             if (inputStream != null){
                 try {
@@ -103,7 +97,7 @@ public class MinioServiceImpl implements MinioService {
             );
             log.info("成功删除文件 {}", fileName);
         } catch (Exception e) {
-            log.error("minio文件删除失败{}", fileName);
+            throw new RuntimeException("minio文件删除失败: "+fileName, e);
         }
     }
 
@@ -118,7 +112,7 @@ public class MinioServiceImpl implements MinioService {
             );
             log.info("成功删除文件 {}", fileName);
         } catch (Exception e) {
-            log.error("minio文件删除失败{}", fileName);
+            throw new RuntimeException("minio文件删除失败: "+fileName, e);
         }
     }
 
@@ -143,16 +137,18 @@ public class MinioServiceImpl implements MinioService {
         try {
             for (Result<DeleteError> result : results) {
                 DeleteError error = result.get();
-                log.warn("minio批量删除文件失败：" + error.objectName() + "; " + error.message());
+                if (error != null){
+                    throw new RuntimeException("minio文件批量删除失败: "+ fileNames);
+                }
             }
         } catch (Exception e) {
-            log.warn("minio文件批量删除失败{}",fileNames);
+            throw new RuntimeException(e.getMessage());
         }
     }
 
     @Override
     public void downloadFile(String fileName, HttpServletResponse response) {
-        StatObjectResponse statObject = null;
+        StatObjectResponse statObject;
         try {
             statObject = minioClient.statObject(
                     StatObjectArgs.builder()
@@ -176,21 +172,20 @@ public class MinioServiceImpl implements MinioService {
         response.setCharacterEncoding("utf-8");
 
         try (GetObjectResponse object = minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket(minioProperties.getBucketName())
-                            .object(fileName)
-                            .build()
-            )) {
+                GetObjectArgs.builder()
+                        .bucket(minioProperties.getBucketName())
+                        .object(fileName)
+                        .build()
+        )) {
             object.transferTo(response.getOutputStream());
         }catch (Exception e){
             writerResponse(response, 404, "文件不存在！");
-            return;
         }
     }
 
     @Override
     public void preview(String fileName, HttpServletResponse response) {
-        StatObjectResponse statObject = null;
+        StatObjectResponse statObject;
         if (response.isCommitted()){
             return;
         }
@@ -221,14 +216,12 @@ public class MinioServiceImpl implements MinioService {
                         .build())) {
             IOUtils.copy(inputStream, response.getOutputStream());
             response.flushBuffer();
-            inputStream.close();
         } catch (Exception e) {
             log.error("获取{}文件流失败!", fileName);
             if (response.isCommitted()){
                 return;
             }
             writerResponse(response, 500, "获取文件流失败!");
-            return;
         }
     }
 
@@ -237,7 +230,7 @@ public class MinioServiceImpl implements MinioService {
 
     @Override
     public void previewVideo(String fileName, HttpServletResponse response, long start, long end) {
-        StatObjectResponse statObject = null;
+        StatObjectResponse statObject;
         if (response.isCommitted()){
             return;
         }
@@ -278,14 +271,11 @@ public class MinioServiceImpl implements MinioService {
                         .build())) {
             IOUtils.copy(inputStream, response.getOutputStream());
             response.flushBuffer();
-            inputStream.close();
         } catch (Exception e) {
-            log.error("获取{}视频流失败!", fileName);
             if (response.isCommitted()){
                 return;
             }
             writerResponse(response, 500, "获取视频流失败!");
-            return;
         }
     }
 
@@ -303,6 +293,7 @@ public class MinioServiceImpl implements MinioService {
             }
             response.getWriter().write(s);
         } catch (Exception e) {
+            log.warn("minio响应写入失败", e);
         }
     }
 }

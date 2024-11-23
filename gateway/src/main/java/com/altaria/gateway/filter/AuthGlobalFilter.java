@@ -1,6 +1,5 @@
 package com.altaria.gateway.filter;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.altaria.common.constants.UserConstants;
 
@@ -31,7 +30,7 @@ public class AuthGlobalFilter implements GlobalFilter {
         String token = request.getHeaders().getFirst("Authorization");
         if (token != null && token.startsWith("Bearer ")){
             token = token.substring(7);
-            Map<String, Object> map = null;
+            Map<String, Object> map;
             try {
                 map = JWTUtil.parseJwt(token);
                 String uId = map.get(UserConstants.USER_ID).toString();

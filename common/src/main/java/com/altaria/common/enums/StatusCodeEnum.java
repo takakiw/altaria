@@ -57,8 +57,8 @@ public enum StatusCodeEnum {
 
 
 
-    int code;
-    String msg;
+    private final int code;
+    private final String msg;
 
     StatusCodeEnum(int code, String msg) {
         this.code = code;
