@@ -5,7 +5,7 @@ spring:
   application:
     name: space-service
   config:
-    import: nacos:space-service-space, nacos:seata-config, nacos:rabbit-config, optional:nacos:zipkin-config
+    import: nacos:space-service-space, nacos:seata-config, nacos:rabbit-config
   cloud:
     nacos:
       discovery:

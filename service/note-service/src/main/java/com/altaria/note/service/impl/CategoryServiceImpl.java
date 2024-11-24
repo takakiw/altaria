@@ -88,7 +88,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
         if (cacheService.isHasKeyCategoryParent(uid)){
             List<Category> currentParentAllCategory = cacheService.getCurrentParentAllCategory(uid);
-            currentParentAllCategory = currentParentAllCategory.stream().sorted((a, b) -> a.getName().compareTo(b.getName())).toList();
+            currentParentAllCategory = currentParentAllCategory.stream().sorted((a, b) -> a.getName() == null ? -1 : a.getName().compareTo(b.getName())).toList();
             return Result.success(new PageResult<>(currentParentAllCategory.size(), currentParentAllCategory));
         }else{
             List<Category> noteCategories = categoryMapper.listCategories(uid);

@@ -41,16 +41,6 @@
 
     <dependencyManagement>
         <dependencies>
-
-            <!-- micrometer-tracing -->
-            <dependency>
-                <groupId>io.micrometer</groupId>
-                <artifactId>micrometer-tracing-bom</artifactId>
-                <version>${micrometer-tracing.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <!-- springcloud的依赖-->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>

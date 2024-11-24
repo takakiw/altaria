@@ -4,7 +4,7 @@ spring:
   application:
     name: note-service
   config:
-    import: nacos:note-service-space, nacos:rabbit-config, optional:nacos:zipkin-config
+    import: nacos:note-service-space, nacos:rabbit-config
   cloud:
     nacos:
       discovery:
