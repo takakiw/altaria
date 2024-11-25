@@ -13,19 +13,19 @@ spring:
         password: nacos
         encode: UTF-8
         file-extension: yml
+    gateway:
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 100
+            redis-rate-limiter.requestedTokens: 1
   config:
     import:
       - optional:nacos:gateway-service-space
 server:
   port: 10086
 
-management:
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: http://192.168.96.132:9411/api/v2/spans
 logging:
-  pattern:
-    level: ${spring.application.name},%X{traceId:-},%X{spanId:-}
+  level:
+    org.springframework.cloud.gateway: DEBUG

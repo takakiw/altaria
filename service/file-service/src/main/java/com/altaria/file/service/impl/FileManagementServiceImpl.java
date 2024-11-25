@@ -935,7 +935,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                 }
                 cacheService.deleteUploadFile(fid);
                 log.info("秒传");
-                return Result.success(100);
+                return Result.success(100, null,"秒传成功");
             }
         }
 
@@ -973,9 +973,9 @@ public class FileManagementServiceImpl implements FileManagementService {
                 String contentType = type;
                 // 使用rabbitmq 异步转码
                 rabbitTemplate.convertAndSend("upload-queue",new UploadMQType(uid, dbId, fid, contentType, suffix, tempPath, md5));
-                return Result.success(200);
+                return Result.success();
             }
-            return Result.success(200);
+            return Result.success();
         }catch (Exception e){
             if (tempDir != null){
                 FileUtils.deleteQuietly(tempDir);

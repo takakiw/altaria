@@ -42,9 +42,6 @@ public class ShareServiceImpl implements ShareService {
     @Autowired
     private ShareMapper shareMapper;
 
-    @Value("${file.share.url}")
-    private String shareUrl;
-
     @Autowired
     private FileServiceClient fileServiceClient;
 
@@ -78,7 +75,7 @@ public class ShareServiceImpl implements ShareService {
         dbShare.setName(name);
         dbShare.setUid(userId);
         dbShare.setExpire(share.getExpire());
-        String url = shareUrl + dbShare.getId();
+        String url = dbShare.getId().toString();
         dbShare.setUrl(url);
         if(StringUtils.isNotBlank(share.getSign()) && share.getSign().length() == 4){
             dbShare.setSign(share.getSign());

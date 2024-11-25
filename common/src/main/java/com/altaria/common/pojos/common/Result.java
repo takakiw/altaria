@@ -22,12 +22,6 @@ public class Result<T> implements Serializable {
         return result;
     }
 
-    public static <T> Result<T> success(T object) {
-        Result<T> result = new Result<T>();
-        result.data = object;
-        result.code = StatusCodeEnum.SUCCESS.getCode();
-        return result;
-    }
     public static <T> Result<T> success(Integer code, T data, String msg) {
         Result<T> result = new Result<T>();
         result.code = code;
@@ -40,6 +34,13 @@ public class Result<T> implements Serializable {
         Result result = new Result();
         result.msg = statusCodeEnum.getMessage();
         result.code = statusCodeEnum.getCode();
+        return result;
+    }
+
+    public static <T> Result<T> success(T object) {
+        Result<T> result = new Result<T>();
+        result.data = object;
+        result.code = StatusCodeEnum.SUCCESS.getCode();
         return result;
     }
 

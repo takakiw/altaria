@@ -2,7 +2,6 @@ package com.altaria.common.enums;
 
 public enum StatusCodeEnum {
 
-    FILE_UPDATE_FAST(100, "秒传成功"),
     FILE_UPLOAD_FAILED(101, "文件上传失败"),
     SPACE_NOT_ENOUGH(102,"空间不足"),
 
