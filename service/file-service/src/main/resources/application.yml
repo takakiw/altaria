@@ -8,15 +8,15 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 192.168.96.132:8848
+        server-addr: nacos:8848
         username: nacos
         password: nacos
       config:
-        server-addr: 192.168.96.132:8848
+        server-addr: nacos:8848
         file-extension: yaml
         username: nacos
         password: nacos
-      server-addr: 192.168.96.132:8848
+      server-addr: nacos:8848
     openfeign:
       httpclient:
         enabled: true

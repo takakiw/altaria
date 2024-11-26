@@ -36,7 +36,6 @@ public class FileStoreHandle {
     @Autowired
     private DataSourceTransactionManager dataSourceTransactionManager;
 
-
     @Autowired
     private MinioService minioService;
 

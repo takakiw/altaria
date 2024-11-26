@@ -13,7 +13,7 @@ import java.io.InputStreamReader;
 public class FfmpegUtil {
     private static final Logger logger = LoggerFactory.getLogger(FfmpegUtil.class);
 
-    private final static String ffmpegPath = "D:\\environment\\ffmpeg\\bin\\ffmpeg.exe";
+    private final static String ffmpegPath = "ffmpeg";
 
 
     public static void createTargetThumbnail(File sourceFile, Integer width, File targetFile) {
