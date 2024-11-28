@@ -182,6 +182,9 @@ services:
       - al-net
     ports:
       - 28082:8082
+    volumes:
+      - ./data/file/cover:/temp/file/cover
+      - ./data/file/union:/temp/file/union
     depends_on:
       nacos:
         condition: service_healthy
