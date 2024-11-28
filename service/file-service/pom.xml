@@ -153,6 +153,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.altaria.file.FileApplication</mainClass>
+                    <finalName>file-service</finalName>
                 </configuration>
                 <executions>
                     <execution>

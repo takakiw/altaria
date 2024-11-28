@@ -1,0 +1,296 @@
+services:
+  minio:
+    image: minio/minio
+    networks:
+      - al-net
+    ports:
+      - 29000:9000
+      - 29090:9090
+    environment:
+      - MINIO_ACCESS_KEY=minio
+      - MINIO_SECRET_KEY=minio123
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data/minio/data:/data
+      - ./data/minio/config:/root/.minio
+    command: server /data --console-address ":9090" --address ":9000"
+  nacos:
+    image: nacos/nacos-server
+    networks:
+      - al-net
+    ports:
+      - 28848:8848
+      - 29848:9848
+      - 29849:9849
+    environment:
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+      - MODE=standalone
+    volumes:
+      - ./data/nacos/logs:/home/nacos/logs
+      - ./data/nacos/conf:/home/nacos/conf
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/#/login"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  mysql:
+    image: mysql:8.0.23
+    networks:
+      - al-net
+    ports:
+      - 23306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/mysql/mysql-files:/var/lib/mysql-files
+      - ./data/mysql/conf:/etc/mysql
+      - ./data/mysql/logs:/var/log/mysql
+      - ./data/mysql/data:/var/lib/mysql
+      - ./data/mysql/init.d:/docker-entrypoint-initdb.d
+    command:
+      [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci"
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --silent localhost:3306 >/dev/null || exit 1"
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  redis:
+    image: redis:latest
+    networks:
+      - al-net
+    ports:
+      - 26379:6379
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - al-net
+    ports:
+      - 25672:5672
+      - 35672:15672
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: root
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "node_health_check"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  init:
+    build:
+      context: ./nacos_init
+      dockerfile: Dockerfile
+    image: al-init
+    networks:
+      - al-net
+    volumes:
+      - ./nacos_init/data:/etc/nacos/data  # 挂载配置文件
+      - ./nacos_init/script:/etc/nacos/script  # 挂载脚本文件
+    command: [ "/bin/bash", "/etc/nacos/script/nacos_init.sh", "/etc/nacos/data/nacos-config.zip" ]  # 指定启动命令
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  seata:
+    image: seataio/seata-server:1.6.1
+    networks:
+      - al-net
+    ports:
+      - 28091:8091
+      - 27091:7091
+    volumes:
+      - ./data/seata/logs:/root/logs
+      - ./data/seata/conf/application.yml:/seata-server/resources/application.yml
+    environment:
+      - SEATA_IP=${LOCALHOST}
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      init:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7091/#/login"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    image: al-gateway
+    networks:
+      - al-net
+    ports:
+      - 10086:10086
+    depends_on:
+      nacos:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init:
+        condition: service_started
+
+  user:
+    build:
+      context: ./service/user-service
+      dockerfile: Dockerfile
+    image: al-user
+    networks:
+      - al-net
+    ports:
+      - 28081:8081
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      init:
+        condition: service_started
+  file:
+    build:
+      context: ./service/file-service
+      dockerfile: Dockerfile
+    image: al-file
+    networks:
+      - al-net
+    ports:
+      - 28082:8082
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seata:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      init:
+        condition: service_started
+
+
+  share:
+    build:
+      context: ./service/share-service
+      dockerfile: Dockerfile
+    image: al-share
+    networks:
+      - al-net
+    ports:
+      - 28083:8083
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init:
+        condition: service_started
+
+  space:
+    build:
+      context: ./service/space-service
+      dockerfile: Dockerfile
+    image: al-space
+    networks:
+      - al-net
+    ports:
+      - 28084:8084
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seata:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      init:
+        condition: service_started
+
+  note:
+    build:
+      context: ./service/note-service
+      dockerfile: Dockerfile
+    image: al-note
+    networks:
+      - al-net
+    ports:
+      - 28085:8085
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      init:
+        condition: service_started
+
+  preview:
+    build:
+      context: ./service/preview-service
+      dockerfile: Dockerfile
+    image: al-preview
+    networks:
+      - al-net
+    ports:
+      - 28086:8086
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      init:
+        condition: service_started
+
+
+  web:
+    image: al-web:latest
+    networks:
+      - al-net
+    ports:
+      - 80:80
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+networks:
+  al-net:

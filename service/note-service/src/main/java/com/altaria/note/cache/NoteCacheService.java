@@ -30,12 +30,12 @@ public class NoteCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveNote(Note note) {
         redisTemplate.opsForValue().set(NOTE_PREFIX + note.getId(), note, NOTE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void deleteNote(Long id) {
         redisTemplate.delete(NOTE_PREFIX + id);
     }
@@ -44,12 +44,12 @@ public class NoteCacheService {
         return (Note) redisTemplate.opsForValue().get(NOTE_PREFIX + id);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveNullNote(Long id) {
         redisTemplate.opsForValue().set(NOTE_PREFIX + id, new Note(), NOTE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void addCategoryChildren(Note note) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(CATEGORY_CHILDREN_PREFIX + note.getUid() + ":" + note.getCid()))){
             redisTemplate.opsForZSet().add(CATEGORY_CHILDREN_PREFIX + note.getUid() + ":" + note.getCid(), note.getId(), note.getUpdateTime().toEpochSecond(ZoneOffset.UTC));
@@ -57,13 +57,13 @@ public class NoteCacheService {
         saveNote(note);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void removeCategoryChildren(Note note) {
         deleteNote(note.getId());
         redisTemplate.opsForZSet().remove(CATEGORY_CHILDREN_PREFIX + note.getUid() + ":" + note.getCid(), note.getId());
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveCategoryAllChildren(Long uid, Long cid, List<Note> notes) {
         redisTemplate.delete(CATEGORY_CHILDREN_PREFIX + uid + ":" + cid);
         notes.forEach(note -> {
