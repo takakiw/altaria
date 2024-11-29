@@ -14,6 +14,8 @@ services:
       - ./data/minio/data:/data
       - ./data/minio/config:/root/.minio
     command: server /data --console-address ":9090" --address ":9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090"]
   nacos:
     image: nacos/nacos-server
     networks:
@@ -23,14 +25,14 @@ services:
       - 29848:9848
       - 29849:9849
     environment:
-      - JVM_XMS=256m
-      - JVM_XMX=256m
+      - JVM_XMS=512m
+      - JVM_XMX=512m
       - MODE=standalone
     volumes:
       - ./data/nacos/logs:/home/nacos/logs
-      - ./data/nacos/conf:/home/nacos/conf
+      - ./data/nacos/conf/application.properties:/home/nacos/conf/application.properties
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/#/login"]
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -57,12 +59,12 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "curl --silent localhost:3306 >/dev/null || exit 1"
+          "CMD", "mysqladmin", "ping", "--host=localhost", "--user=root", "--password=root"
         ]
       interval: 10s
       timeout: 10s
       retries: 5
+      start_period: 30s
   redis:
     image: redis:latest
     networks:
@@ -125,16 +127,14 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7091/#/login"]
+      test: ["CMD", "curl", "-f", "http://localhost:7091"]
       interval: 10s
       timeout: 10s
       retries: 5
-
+      start_period: 30s
 
   gateway:
     build:
@@ -151,7 +151,11 @@ services:
       redis:
         condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
+      user:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10086/user/info/1"]
 
   user:
     build:
@@ -165,14 +169,18 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/user/info/1" ]
+      interval: 10s
+      retries: 5
+      timeout: 10s
+      start_period: 60s
   file:
     build:
       context: ./service/file-service
@@ -188,8 +196,6 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
@@ -199,7 +205,7 @@ services:
       minio:
         condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
 
 
   share:
@@ -214,12 +220,10 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
 
   space:
     build:
@@ -233,8 +237,6 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
       seata:
@@ -242,7 +244,7 @@ services:
       rabbitmq:
         condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
 
   note:
     build:
@@ -256,14 +258,12 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       init:
-        condition: service_started
+        condition: service_completed_successfully
 
   preview:
     build:
@@ -277,13 +277,10 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
-      mysql:
-        condition: service_healthy
       minio:
         condition: service_healthy
       init:
-        condition: service_started
-
+        condition: service_completed_successfully
 
   web:
     image: al-web:latest
@@ -294,6 +291,5 @@ services:
     depends_on:
       gateway:
         condition: service_healthy
-
 networks:
   al-net:

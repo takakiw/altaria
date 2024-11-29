@@ -2,10 +2,12 @@ FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-RUN sed -i 's@/archive.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list && \
-    sed -i 's@/security.ubuntu.com/@/mirrors.aliyun.com/@g' /etc/apt/sources.list && \
-    apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+RUN sed -i 's@/deb.debian.org/@/ftp.cn.debian.org/@g' /etc/apt/sources.list && \
+    sed -i 's@/security.debian.org/@/ftp.cn.debian.org/@g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
 
 COPY target/file-service.jar /app/file-service.jar
 
