@@ -37,7 +37,7 @@ public class ShareCacheService {
         return (Share) redisTemplate.opsForValue().get(SHARE_PREFIX + shareId);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveNullShareInfo(Long shareId) {
         Share share = new Share();
         share.setName("null");
@@ -45,7 +45,7 @@ public class ShareCacheService {
     }
 
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveShareInfo(Share shareInfo) {
         redisTemplate.opsForValue().set(SHARE_PREFIX + shareInfo.getId(), shareInfo, SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
         if (Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + shareInfo.getUid()))){
@@ -68,7 +68,7 @@ public class ShareCacheService {
         return null;
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveUserAllShare(Long userId, List<Share> shareList) {
         redisTemplate.delete(USER_SHARE_PREFIX + userId);
         shareList.forEach(share -> {
@@ -82,7 +82,7 @@ public class ShareCacheService {
         return Boolean.TRUE.equals(redisTemplate.hasKey(USER_SHARE_PREFIX + userId));
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void deleteShareBatch(List<Share> shareList) {
         shareList.forEach(share -> {
             redisTemplate.delete(SHARE_PREFIX + share.getId());
@@ -93,13 +93,13 @@ public class ShareCacheService {
     }
 
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void saveUserNullChild(Long userId) {
         redisTemplate.opsForZSet().add(USER_SHARE_PREFIX + userId, NULL_USER_SHARE_VALUE, System.currentTimeMillis());
         redisTemplate.expire(USER_SHARE_PREFIX + userId, NULL_USER_SHARE_EXPIRE_TIME, TimeUnit.SECONDS);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void incrementVisit(Long shareId) {
         Share share = getShareInfo(shareId);
         if (share != null) {

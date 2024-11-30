@@ -80,6 +80,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <layout>JAR</layout>
+                    <finalName>gateway</finalName>
                     <mainClass>com.altaria.gateway.gatewayApplication</mainClass>
                 </configuration>
                 <executions>
