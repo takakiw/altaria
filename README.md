@@ -58,7 +58,7 @@ docker-compose ps
 - **网关地址**: `http://localhost:10086`
 - **Nacos 控制台**: `http://localhost:28848/nacos`
 - **minio 控制台**: `http://localhost:29090`
-- **minio 控制台**: `http://localhost:7091`
+- **seata 控制台**: `http://localhost:7091`
 - **rabbitmq 控制台**: `http://localhost:35672`
 - **其他服务**: 请参考项目文档。
 
