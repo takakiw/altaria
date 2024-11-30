@@ -63,7 +63,8 @@ docker-compose ps
 - **minio 控制台**: `http://localhost:29090`
 - **seata 控制台**: `http://localhost:7091`
 - **rabbitmq 控制台**: `http://localhost:35672`
-- **其他服务**: 请参考项目文档。
+- **zipkin 控制台**: `http://localhost:9411`
+- **其他服务**: 请参考docker-compose配置。
 
 ## 技术栈
 - **Spring Boot**: 微服务应用的核心框架
