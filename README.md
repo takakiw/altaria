@@ -2,6 +2,8 @@
 
 项目使用了 JDK 17 和主流的微服务技术栈，包括 Redis、MySQL、MinIO、Nacos、Seata 和 RabbitMQ。
 
+**[Api文档](https://apifox.com/apidoc/shared-089d06f9-111f-4495-a124-4d6722df4d39)**
+
 ## 环境要求
 
 在启动项目之前，请确保您的开发环境满足以下条件：
