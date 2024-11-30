@@ -25,3 +25,4 @@ spring:
     import:
       - optional:nacos:user-service-space
       - optional:nacos:rabbit-config
+      - optional:nacos:zipkin-config

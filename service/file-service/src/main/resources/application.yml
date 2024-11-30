@@ -4,7 +4,7 @@ spring:
   application:
     name: file-service
   config:
-    import: nacos:file-service-space, nacos:rabbit-config, nacos:seata-config
+    import: nacos:file-service-space, nacos:rabbit-config, nacos:seata-config, optional:nacos:zipkin-config
   cloud:
     nacos:
       discovery:

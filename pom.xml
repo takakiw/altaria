@@ -37,11 +37,29 @@
         <commons.lang3.version>3.12.0</commons.lang3.version>
         <micrometer-tracing.version>1.0.4</micrometer-tracing.version>
         <guava.version>33.0.0-jre</guava.version>
+        <micrometer-tracing.version>1.0.4</micrometer-tracing.version>
+        <feign-micrometer.version>12.3</feign-micrometer.version>
     </properties>
 
 
     <dependencyManagement>
         <dependencies>
+
+            <!-- micrometer-tracing -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bom</artifactId>
+                <version>${micrometer-tracing.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.openfeign</groupId>
+                <artifactId>feign-micrometer</artifactId>
+                <version>${feign-micrometer.version}</version>
+            </dependency>
+
             <!-- springcloud的依赖-->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>

@@ -16,5 +16,6 @@ spring:
   config:
     import:
       - optional:nacos:gateway-service-space
+      - optional:nacos:zipkin-config
 server:
   port: 10086
