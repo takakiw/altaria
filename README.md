@@ -1,4 +1,5 @@
 # altaria-space
+提供`文件管理`，`文件预览`，`文件分享`，`在线笔记创作`，`笔记分享`，`日常常用工具`的分布式云空间
 
 项目使用了 JDK 17 和主流的微服务技术栈，包括 Redis、MySQL、MinIO、Nacos、Seata 和 RabbitMQ。
 
